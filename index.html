@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pinnacle CRM</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0c0a; --surface: #1a1714; --border: rgba(201,168,76,0.2);
+      --gold: #d4a843; --text: #e8dcc8; --muted: #8a7d6a; --dim: #554f47;
+      --green: #6fcf97; --yellow: #fcd34d; --red: #fca5a5; --blue: #93c5fd;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Jost', sans-serif; font-weight: 300; min-height: 100vh; }
+    h1, h2, h3 { font-family: 'Cormorant Garamond', serif; font-weight: 400; }
+    input, select, textarea, button { font-family: 'Jost', sans-serif; font-weight: 300; }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(201,168,76,0.6) !important; }
+    select option { background: #0d0d12; color: var(--text); }
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-thumb { background: #2a2520; border-radius: 2px; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    .fu { animation: fadeUp 0.3s ease forwards; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ── REPLACE THESE WITH YOUR CREDENTIALS ──────────────────
+const SUPABASE_URL = "https://ozrybagfwnsaakjamztl.supabase.co";
+const SUPABASE_KEY = "sb_publishable_hkoTQVteawqO4YAbj17F6Q_PmshLH50";
+// ─────────────────────────────────────────────────────────
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const gold = "#d4a843";
+
+const JESSICA_PHOTO = "./jessica.jpg";
+
+const AGENT_SYSTEM_PROMPT = `You are Jessica, the AI sales agent for Pinnacle CRM — representing a luxury automotive dealership specializing in Lamborghini, Bentley, and Rolls-Royce.
+YOUR VOICE: Warm, calm, confident — trusted advisor, not a salesperson. Short and punchy — 2-4 sentences max. One question per message.
+GOALS: 1) Make them feel great about their vehicle choice. 2) Collect naturally: vehicle, timeline, budget, name, phone, address, source. 3) Justify price confidently with market context. 4) Hand off at test drive request or strong buying signal.
+HANDOFF LINE: "You're exactly the kind of client our advisors love to work with — I'm flagging your file as priority right now. Expect a call from our team very shortly."
+COMPLIANCE: Disclose AI if asked. No guaranteed APR quotes. No pressure. Include opt-out. Never confirm availability without team check.`;
+
+const AGENT_VEHICLES = ["Lamborghini Huracán","Lamborghini Urus","Bentley Bentayga","Bentley Continental GT","Rolls-Royce Ghost","Rolls-Royce Cullinan","Rolls-Royce Spectre"];
+const STAGES = ["New Lead","Contacted","Negotiating","Closed","Lost"];
+const STAGE_STYLE = {
+  "New Lead":    { color:"#93c5fd", bg:"rgba(147,197,253,0.08)", border:"rgba(147,197,253,0.25)" },
+  "Contacted":   { color:"#fcd34d", bg:"rgba(252,211,77,0.08)",  border:"rgba(252,211,77,0.25)"  },
+  "Negotiating": { color:"#b8975a", bg:"rgba(201,168,76,0.12)",  border:"rgba(201,168,76,0.3)"  },
+  "Closed":      { color:"#6ee7b7", bg:"rgba(110,231,183,0.08)", border:"rgba(110,231,183,0.25)" },
+  "Lost":        { color:"#fca5a5", bg:"rgba(252,165,165,0.08)", border:"rgba(252,165,165,0.25)" },
+};
+const SOURCES = ["Walk-in","Phone","Website","Referral","AutoTrader","Cars.com","Email","Other"];
+const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC"];
+
+const emptyForm = () => ({
+  first_name:"", last_name:"", cell:"", home_phone:"", primary_email:"", secondary_email:"",
+  street:"", city:"", state:"", zip:"", birthday:"", preferred_language:"English",
+  co_buyer_first:"", co_buyer_last:"", co_buyer_cell:"", co_buyer_email:"",
+  vehicle_of_interest:"", lead_source:"", stage:"New Lead",
+  do_not_call:false, do_not_text:false, do_not_email:false, notes:"",
+  trade_vin:"", trade_year:"", trade_make:"", trade_model:"", trade_trim:"",
+  trade_mileage:"", trade_condition:"Good", trade_accidents:"No", trade_owners:"1", trade_notes:""
+});
+
+// ── SMALL COMPONENTS ───────────────────────────────────────────────
+function Lbl({children}) {
+  return <div style={{fontSize:10,letterSpacing:"0.28em",color:gold,textTransform:"uppercase",marginBottom:7,fontWeight:500}}>{children}</div>;
+}
+function Inp(props) {
+  return <input {...props} style={{width:"100%",padding:"11px 14px",background:"#1a1714",border:"1px solid rgba(201,168,76,0.22)",borderRadius:3,color:"#e8dcc8",fontSize:14,transition:"border-color 0.2s",...(props.style||{})}} />;
+}
+function Sel({children,...props}) {
+  return (
+    <div style={{position:"relative"}}>
+      <select {...props} style={{width:"100%",padding:"11px 36px 11px 14px",background:"#1a1714",border:"1px solid rgba(201,168,76,0.22)",borderRadius:3,color:props.value?"#e8dcc8":"#7a6d5a",fontSize:14,appearance:"none",WebkitAppearance:"none",transition:"border-color 0.2s"}}>
+        {children}
+      </select>
+      <div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",color:gold,fontSize:9,pointerEvents:"none"}}>▾</div>
+    </div>
+  );
+}
+function Fld({label,col,children}) {
+  return (
+    <div style={{marginBottom:18,gridColumn:col||"span 1"}}>
+      <Lbl>{label}</Lbl>
+      {children}
+    </div>
+  );
+}
+function GLine({label}) {
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:12,margin:"8px 0 20px"}}>
+      <div style={{width:20,height:1,background:`linear-gradient(to right,transparent,${gold})`}} />
+      <span style={{fontSize:9,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",fontWeight:500,whiteSpace:"nowrap"}}>{label}</span>
+      <div style={{flex:1,height:1,background:`linear-gradient(to right,${gold},transparent)`}} />
+    </div>
+  );
+}
+function Badge({stage}) {
+  const s = STAGE_STYLE[stage]||STAGE_STYLE["New Lead"];
+  return <span style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:s.color,background:s.bg,border:`1px solid ${s.border}`,borderRadius:2,padding:"3px 9px",fontWeight:500,whiteSpace:"nowrap"}}>{stage}</span>;
+}
+function Tog({label,checked,onChange}) {
+  return (
+    <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+      <div onClick={onChange} style={{width:36,height:20,borderRadius:10,background:checked?"rgba(252,165,165,0.25)":"rgba(255,255,255,0.05)",border:`1px solid ${checked?"rgba(252,165,165,0.4)":"rgba(255,255,255,0.1)"}`,position:"relative",transition:"all 0.2s",flexShrink:0}}>
+        <div style={{position:"absolute",top:2,left:checked?18:2,width:14,height:14,borderRadius:"50%",background:checked?"#fca5a5":"#4a4038",transition:"left 0.2s"}} />
+      </div>
+      <span style={{fontSize:12,color:"#8a7d6a"}}>{label}</span>
+    </label>
+  );
+}
+
+
+function JessicaAvatar({size=40}) {
+  return (
+    <div style={{width:size,height:size,borderRadius:"50%",border:"1.5px solid #c9a84c",overflow:"hidden",flexShrink:0,background:"#1a1714"}}>
+      <img src={JESSICA_PHOTO} alt="Jessica" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 15%"}} />
+    </div>
+  );
+}
+
+function AgentView() {
+  const [messages, setMessages] = React.useState([]);
+  const [input, setInput] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [selectedVehicle, setSelectedVehicle] = React.useState("");
+  const [started, setStarted] = React.useState(false);
+  const [handoff, setHandoff] = React.useState(false);
+  const bottomRef = React.useRef(null);
+  React.useEffect(() => { bottomRef.current?.scrollIntoView({behavior:"smooth"}); }, [messages]);
+
+  const startConvo = async (v) => {
+    setSelectedVehicle(v); setStarted(true); setLoading(true);
+    try {
+      const res = await fetch("/.netlify/functions/jessica", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:AGENT_SYSTEM_PROMPT,messages:[{role:"user",content:`New lead interested in the ${v}. Send your opening message. Warm, genuine, subtle urgency. 2-3 sentences max.`}]})});
+      const data = await res.json();
+      setMessages([{role:"assistant",content:data.content?.[0]?.text||"Welcome to Pinnacle! So glad you reached out."}]);
+    } catch { setMessages([{role:"assistant",content:"Welcome to Pinnacle! So glad you reached out."}]); }
+    setLoading(false);
+  };
+
+  const sessionRef = React.useRef("s" + Date.now());
+  const saveConvo = async(msgs, vehicle, extra) => {
+    try {
+      await sb.from("jessica_conversations").upsert({session_id:sessionRef.current,messages:msgs,vehicle_interest:vehicle,status:"active",updated_at:new Date().toISOString(),...extra},{onConflict:"session_id"});
+    } catch(e) {}
+  };
+  const send = async () => {
+    if (!input.trim()||loading) return;
+    const msg = input.trim(); setInput("");
+    const newMsgs = [...messages,{role:"user",content:msg}];
+    setMessages(newMsgs); setLoading(true);
+    try {
+      const res=await fetch("/.netlify/functions/jessica",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:AGENT_SYSTEM_PROMPT,messages:newMsgs.map(m=>({role:m.role,content:m.content}))})});
+      const data=await res.json();
+      const reply=data.content?.[0]?.text||"I'm here — tell me more.";
+      const isH=reply.includes("flagging your file");
+      if(isH) setHandoff(true);
+      const allMsgs=[...newMsgs,{role:"assistant",content:reply}];
+      setMessages(allMsgs);
+      const txt=allMsgs.map(m=>m.content).join(" ");
+      const nm=txt.match(/name is ([A-Za-z]+ ?[A-Za-z]*)/i);
+      const em=txt.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+[.][a-zA-Z]{2,}/);
+      await saveConvo(allMsgs,selectedVehicle,{handoff_triggered:isH,lead_name:nm?nm[1]:null,lead_email:em?em[0]:null,summary:reply.slice(0,120)});
+    } catch { setMessages(prev=>[...prev,{role:"assistant",content:"Could you repeat that? I'm here with you."}]); }
+    setLoading(false);
+  };
+
+  const reset = () => { setMessages([]); setInput(""); setStarted(false); setSelectedVehicle(""); setHandoff(false); };
+
+  return (
+    <div style={{maxWidth:680}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:28}}>
+        <div>
+          <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:6}}>AI Agent</div>
+          <h1 style={{fontSize:30,color:"#e8dcc8",fontFamily:"'Cormorant Garamond',serif"}}>Jessica</h1>
+        </div>
+        {started && <button onClick={reset} style={{padding:"11px 22px",background:"rgba(201,168,76,0.12)",border:"1px solid rgba(201,168,76,0.45)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.22em",textTransform:"uppercase",cursor:"pointer"}}>+ New Lead</button>}
+      </div>
+
+      {!started ? (
+        <div>
+          <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:28,marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
+              <JessicaAvatar size={56} />
+              <div>
+                <div style={{fontSize:16,color:"#e8dcc8",fontFamily:"'Cormorant Garamond',serif",marginBottom:2}}>Jessica</div>
+                <div style={{fontSize:11,color:"#6fcf97"}}>● Online · AI Sales Agent</div>
+              </div>
+            </div>
+            <div style={{fontSize:13,color:"#8a7d6a",marginBottom:20,lineHeight:1.7}}>Select a vehicle to simulate an inbound lead and see how Jessica responds.</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {AGENT_VEHICLES.map(v=>(
+                <button key={v} onClick={()=>startConvo(v)} style={{background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,padding:"11px 14px",color:"#e8dcc8",fontSize:13,cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=gold;e.currentTarget.style.color=gold;}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.2)";e.currentTarget.style.color="#e8dcc8";}}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:24}}>
+            <div style={{fontSize:10,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:14}}>Jessica's Rulebook</div>
+            {[["Voice","Warm, short, confident — trusted advisor"],["Goal","Qualify lead, capture info, justify price"],["Handoff","Test drive request or strong buying signal"],["Compliance","FTC + TCPA baked in — always"]].map(([k,v])=>(
+              <div key={k} style={{display:"flex",gap:16,marginBottom:12,paddingBottom:12,borderBottom:"1px solid rgba(201,168,76,0.1)"}}>
+                <div style={{color:gold,fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",minWidth:90,paddingTop:2}}>{k}</div>
+                <div style={{color:"#8a7d6a",fontSize:13,lineHeight:1.5}}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <JessicaAvatar size={38} />
+              <div>
+                <div style={{fontSize:14,color:"#e8dcc8"}}>Jessica → {selectedVehicle}</div>
+                <div style={{fontSize:11,color:"#6fcf97"}}>● Live Conversation</div>
+              </div>
+            </div>
+            <div style={{fontSize:10,letterSpacing:"0.2em",color:gold,border:"1px solid rgba(201,168,76,0.3)",borderRadius:3,padding:"4px 10px",textTransform:"uppercase"}}>New Lead</div>
+          </div>
+          <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:20,minHeight:360,maxHeight:460,overflowY:"auto",display:"flex",flexDirection:"column",gap:16}}>
+            {messages.map((m,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",alignItems:"flex-end",gap:8}}>
+                {m.role==="assistant" && <JessicaAvatar size={30} />}
+                <div style={{maxWidth:"76%",background:m.role==="user"?"rgba(201,168,76,0.12)":"#0d0c0a",border:`1px solid ${m.role==="user"?"rgba(201,168,76,0.3)":"rgba(201,168,76,0.12)"}`,borderRadius:m.role==="user"?"10px 10px 3px 10px":"10px 10px 10px 3px",padding:"11px 15px",fontSize:14,lineHeight:1.65,color:m.role==="user"?gold:"#e8dcc8"}}>
+                  {m.role==="assistant" && <div style={{fontSize:9,letterSpacing:"0.25em",color:gold,marginBottom:5,textTransform:"uppercase"}}>Jessica</div>}
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <JessicaAvatar size={30} />
+                <div style={{display:"flex",gap:5,padding:"11px 15px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.12)",borderRadius:"10px 10px 10px 3px"}}>
+                  {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:gold,animation:`fadeUp 1.2s ease-in-out ${i*0.2}s infinite`,opacity:0.6}} />)}
+                </div>
+              </div>
+            )}
+            {handoff && <div style={{background:"rgba(45,106,79,0.12)",border:"1px solid rgba(45,106,79,0.35)",borderRadius:4,padding:"12px 16px",fontSize:12,color:"#6fcf97"}}>🔔 <strong>Handoff triggered</strong> — Jessica flagged this lead as priority. Ready for your sales team.</div>}
+            <div ref={bottomRef} />
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Reply as the customer…" style={{flex:1,padding:"11px 14px",background:"#1a1714",border:"1px solid rgba(201,168,76,0.22)",borderRadius:3,color:"#e8dcc8",fontSize:14,fontFamily:"'Jost',sans-serif",fontWeight:300}} />
+            <button onClick={send} disabled={loading||!input.trim()} style={{padding:"11px 22px",background:loading||!input.trim()?"#1a1714":"rgba(201,168,76,0.18)",border:`1px solid ${loading||!input.trim()?"rgba(201,168,76,0.15)":"rgba(201,168,76,0.5)"}`,borderRadius:3,color:loading||!input.trim()?"#554f47":gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:loading||!input.trim()?"not-allowed":"pointer"}}>Send</button>
+          </div>
+          <div style={{fontSize:11,color:"#554f47",textAlign:"center"}}>Type as the customer to test Jessica's responses</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ── EMAIL DRAFTER ──────────────────────────────────────────────────
+function EmailDrafter({client, onClose}) {
+  const [status, setStatus] = React.useState("idle"); // idle, loading, ready, copied
+  const [draft, setDraft] = React.useState(null);
+  const [error, setError] = React.useState(null);
+
+  const generateDraft = async () => {
+    setStatus("loading");
+    setError(null);
+    try {
+      const res = await fetch("/.netlify/functions/draft-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setDraft(data);
+      setStatus("ready");
+    } catch(e) {
+      setError("Couldn't generate draft — " + e.message);
+      setStatus("idle");
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setStatus("copied");
+    setTimeout(() => setStatus("ready"), 2000);
+  };
+
+  const openEmail = () => {
+    const subject = encodeURIComponent(draft.subject);
+    const body = encodeURIComponent(draft.body);
+    window.open(`mailto:${client.primary_email}?subject=${subject}&body=${body}`);
+  };
+
+  return (
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.7)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.3)",borderRadius:8,width:"100%",maxWidth:620,maxHeight:"85vh",overflow:"auto"}}>
+        
+        {/* Header */}
+        <div style={{padding:"20px 24px",borderBottom:"1px solid rgba(201,168,76,0.15)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontSize:10,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:4}}>AI Email Draft</div>
+            <div style={{fontSize:16,color:"#e8dcc8",fontFamily:"'Cormorant Garamond',serif"}}>
+              {client.first_name} {client.last_name} — {client.vehicle_of_interest||"Vehicle Enquiry"}
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"#7a6d5a",fontSize:18,cursor:"pointer",padding:"4px 8px"}}>✕</button>
+        </div>
+
+        <div style={{padding:24}}>
+          {status === "idle" && !draft && (
+            <div style={{textAlign:"center",padding:"32px 0"}}>
+              <div style={{fontSize:14,color:"#8a7d6a",marginBottom:24,lineHeight:1.7}}>
+                Jessica will draft a personalised first response email for {client.first_name} based on their vehicle interest and lead details. Review it before sending.
+              </div>
+              <button onClick={generateDraft} style={{padding:"12px 32px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.5)",borderRadius:4,color:gold,fontSize:12,letterSpacing:"0.25em",textTransform:"uppercase",cursor:"pointer"}}>
+                ✦ Generate Draft
+              </button>
+            </div>
+          )}
+
+          {status === "loading" && (
+            <div style={{textAlign:"center",padding:"40px 0"}}>
+              <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:16}}>
+                {[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:gold,animation:`fadeUp 1.2s ease-in-out ${i*0.2}s infinite`,opacity:0.6}} />)}
+              </div>
+              <div style={{fontSize:13,color:"#8a7d6a"}}>Jessica is drafting your email…</div>
+            </div>
+          )}
+
+          {error && (
+            <div style={{padding:"12px 16px",background:"rgba(252,165,165,0.08)",border:"1px solid rgba(252,165,165,0.2)",borderRadius:4,color:"#fca5a5",fontSize:13,marginBottom:16}}>
+              {error}
+            </div>
+          )}
+
+          {draft && (status === "ready" || status === "copied") && (
+            <div>
+              {/* Subject */}
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:10,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:8}}>Subject Line</div>
+                <div style={{padding:"12px 16px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,fontSize:14,color:"#e8dcc8",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                  <span>{draft.subject}</span>
+                  <button onClick={()=>copyToClipboard(draft.subject)} style={{background:"none",border:"none",color:"#7a6d5a",fontSize:11,cursor:"pointer",whiteSpace:"nowrap",letterSpacing:"0.1em"}}>COPY</button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div style={{marginBottom:24}}>
+                <div style={{fontSize:10,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:8}}>Email Body</div>
+                <textarea
+                  value={draft.body}
+                  onChange={e=>setDraft({...draft,body:e.target.value})}
+                  rows={10}
+                  style={{width:"100%",padding:"14px 16px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,color:"#e8dcc8",fontSize:14,lineHeight:1.8,resize:"vertical",fontFamily:"'Jost',sans-serif",fontWeight:300}}
+                />
+                <div style={{fontSize:11,color:"#554f47",marginTop:6}}>You can edit the draft above before sending.</div>
+              </div>
+
+              {/* Actions */}
+              <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
+                <button onClick={generateDraft} style={{padding:"10px 20px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:"#7a6d5a",fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>
+                  ↺ Regenerate
+                </button>
+                <button onClick={()=>copyToClipboard(draft.body)} style={{padding:"10px 20px",background:"transparent",border:"1px solid rgba(201,168,76,0.3)",borderRadius:4,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>
+                  {status==="copied" ? "✓ Copied!" : "Copy Body"}
+                </button>
+                {client.primary_email && (
+                  <button onClick={openEmail} style={{padding:"10px 24px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.5)",borderRadius:4,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>
+                    Open in Mail ↗
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SETUP SCREEN ───────────────────────────────────────────────────
+function Setup() {
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{maxWidth:520,textAlign:"center"}}>
+        <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:16}}>Setup Required</div>
+        <h1 style={{fontSize:34,color:"#e8dcc8",marginBottom:16}}>Connect Your Database</h1>
+        <p style={{fontSize:14,color:"#7a6d5a",lineHeight:1.8,marginBottom:28}}>
+          Open index.html in CotEditor and replace the two placeholder values with your Supabase credentials, then redeploy.
+        </p>
+        <div style={{padding:"20px 24px",background:"rgba(201,168,76,0.08)",border:"1px solid rgba(201,168,76,0.25)",borderRadius:4,textAlign:"left",marginBottom:24}}>
+          <div style={{fontSize:10,color:gold,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:12}}>Run this SQL in Supabase first:</div>
+          <pre style={{fontSize:11,color:"#8a7d6a",lineHeight:1.9,whiteSpace:"pre-wrap",fontFamily:"monospace"}}>{`create table clients (
+  id uuid default gen_random_uuid() primary key,
+  created_at timestamptz default now(),
+  first_name text, last_name text,
+  cell text, home_phone text,
+  primary_email text, secondary_email text,
+  street text, city text, state text, zip text,
+  birthday text, preferred_language text,
+  co_buyer_first text, co_buyer_last text,
+  co_buyer_cell text, co_buyer_email text,
+  vehicle_of_interest text, lead_source text,
+  stage text default 'New Lead',
+  do_not_call boolean default false,
+  do_not_text boolean default false,
+  do_not_email boolean default false,
+  notes text
+);`}</pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── CLIENT FORM ────────────────────────────────────────────────────
+function ClientForm({initial, onSave, onCancel, saving}) {
+  const [f, setF] = useState(initial || emptyForm());
+  const s = (k,v) => setF(p=>({...p,[k]:v}));
+
+  return (
+    <div style={{maxWidth:680,paddingBottom:60}}>
+      <GLine label="Primary Client" />
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <Fld label="First Name"><Inp value={f.first_name} onChange={e=>s("first_name",e.target.value)} placeholder="First name" /></Fld>
+        <Fld label="Last Name"><Inp value={f.last_name} onChange={e=>s("last_name",e.target.value)} placeholder="Last name" /></Fld>
+        <Fld label="Cell Number"><Inp value={f.cell} onChange={e=>s("cell",e.target.value)} placeholder="(407) 000-0000" /></Fld>
+        <Fld label="Home Number"><Inp value={f.home_phone} onChange={e=>s("home_phone",e.target.value)} placeholder="(407) 000-0000" /></Fld>
+        <Fld label="Primary Email"><Inp value={f.primary_email} onChange={e=>s("primary_email",e.target.value)} placeholder="email@example.com" /></Fld>
+        <Fld label="Secondary Email"><Inp value={f.secondary_email} onChange={e=>s("secondary_email",e.target.value)} placeholder="email@example.com" /></Fld>
+        <Fld label="Birthday"><Inp value={f.birthday} onChange={e=>s("birthday",e.target.value)} type="date" /></Fld>
+        <Fld label="Preferred Language">
+          <Sel value={f.preferred_language} onChange={e=>s("preferred_language",e.target.value)}>
+            {["English","Spanish","French","Portuguese","Mandarin","Arabic","Other"].map(l=><option key={l}>{l}</option>)}
+          </Sel>
+        </Fld>
+      </div>
+
+      <GLine label="Address" />
+      <div style={{marginBottom:18}}><Lbl>Street</Lbl><Inp value={f.street} onChange={e=>s("street",e.target.value)} placeholder="123 Main Street" /></div>
+      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:16}}>
+        <Fld label="City"><Inp value={f.city} onChange={e=>s("city",e.target.value)} placeholder="City" /></Fld>
+        <Fld label="State"><Sel value={f.state} onChange={e=>s("state",e.target.value)}><option value="">State</option>{STATES.map(st=><option key={st}>{st}</option>)}</Sel></Fld>
+        <Fld label="Zip"><Inp value={f.zip} onChange={e=>s("zip",e.target.value)} placeholder="32801" /></Fld>
+      </div>
+
+      <GLine label="Co-Buyer" />
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <Fld label="First Name"><Inp value={f.co_buyer_first} onChange={e=>s("co_buyer_first",e.target.value)} placeholder="First name" /></Fld>
+        <Fld label="Last Name"><Inp value={f.co_buyer_last} onChange={e=>s("co_buyer_last",e.target.value)} placeholder="Last name" /></Fld>
+        <Fld label="Cell"><Inp value={f.co_buyer_cell} onChange={e=>s("co_buyer_cell",e.target.value)} placeholder="(407) 000-0000" /></Fld>
+        <Fld label="Email"><Inp value={f.co_buyer_email} onChange={e=>s("co_buyer_email",e.target.value)} placeholder="email@example.com" /></Fld>
+      </div>
+
+      <GLine label="Deal Information" />
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <Fld label="Vehicle of Interest"><Inp value={f.vehicle_of_interest} onChange={e=>s("vehicle_of_interest",e.target.value)} placeholder="e.g. 2025 Rolls-Royce Cullinan" /></Fld>
+        <Fld label="Lead Source"><Sel value={f.lead_source} onChange={e=>s("lead_source",e.target.value)}><option value="">Select source…</option>{SOURCES.map(src=><option key={src}>{src}</option>)}</Sel></Fld>
+        <Fld label="Deal Stage"><Sel value={f.stage} onChange={e=>s("stage",e.target.value)}>{STAGES.map(st=><option key={st}>{st}</option>)}</Sel></Fld>
+      </div>
+
+      <GLine label="Communication Preferences" />
+      <div style={{display:"flex",gap:32,marginBottom:24}}>
+        <Tog label="Do Not Call" checked={f.do_not_call} onChange={()=>s("do_not_call",!f.do_not_call)} />
+        <Tog label="Do Not Text" checked={f.do_not_text} onChange={()=>s("do_not_text",!f.do_not_text)} />
+        <Tog label="Do Not Email" checked={f.do_not_email} onChange={()=>s("do_not_email",!f.do_not_email)} />
+      </div>
+
+      <GLine label="Notes" />
+      <div style={{marginBottom:24}}>
+        <textarea value={f.notes} onChange={e=>s("notes",e.target.value)} placeholder="Notes about this client or deal…" rows={4}
+          style={{width:"100%",padding:"11px 14px",background:"#1a1714",border:"1px solid rgba(201,168,76,0.22)",borderRadius:3,color:"#e8dcc8",fontSize:14,resize:"vertical",fontFamily:"'Jost',sans-serif",fontWeight:300,lineHeight:1.7}} />
+      </div>
+
+      <GLine label="Trade-In Vehicle" />
+      <div style={{marginBottom:24}}>
+        <div style={{fontSize:9,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:8}}>VIN Decoder — Auto-Fill</div>
+        <div style={{display:"flex",gap:8,marginBottom:14}}>
+          <input value={f.trade_vin||''} onChange={e=>s("trade_vin",e.target.value.toUpperCase())} maxLength={17} placeholder="Enter 17-character VIN (optional)..." style={{flex:1,padding:"11px 14px",background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:"#e8dcc8",fontSize:13,letterSpacing:"0.05em",fontFamily:"monospace"}} />
+          <button type="button" onClick={async()=>{
+            if(!f.trade_vin||f.trade_vin.length!==17)return;
+            try{
+              const res=await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${f.trade_vin}?format=json`);
+              const d=await res.json();
+              const get=v=>d.Results?.find(r=>r.Variable===v)?.Value||'';
+              s("trade_year",get("Model Year"));s("trade_make",get("Make"));
+              s("trade_model",get("Model"));s("trade_trim",get("Trim")||get("Series")||'');
+            }catch(e){}
+          }} style={{padding:"11px 16px",background:"rgba(201,168,76,0.12)",border:"1px solid rgba(201,168,76,0.35)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer",whiteSpace:"nowrap"}}>Decode ✦</button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+          {[["Year","trade_year"],["Make","trade_make"],["Model","trade_model"],["Trim","trade_trim"],["Mileage","trade_mileage"]].map(([lbl,key])=>(
+            <div key={key}>
+              <div style={{fontSize:9,letterSpacing:"0.28em",color:gold,textTransform:"uppercase",marginBottom:5,fontWeight:500}}>{lbl}</div>
+              <input value={f[key]||''} onChange={e=>s(key,e.target.value)} style={{width:"100%",padding:"11px 14px",background:"#1a1714",border:"1px solid rgba(201,168,76,0.22)",borderRadius:3,color:"#e8dcc8",fontSize:14}} />
+            </div>
+          ))}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+          <div>
+            <div style={{fontSize:9,letterSpacing:"0.28em",color:gold,textTransform:"uppercase",marginBottom:8,fontWeight:500}}>Condition</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {["Excellent","Good","Fair","Poor"].map(c=>(
+                <button type="button" key={c} onClick={()=>s("trade_condition",c)} style={{padding:"7px 12px",background:f.trade_condition===c?"rgba(201,168,76,0.15)":"transparent",border:`1px solid ${f.trade_condition===c?"rgba(201,168,76,0.5)":"rgba(201,168,76,0.15)"}`,borderRadius:3,color:f.trade_condition===c?gold:"#8a7d6a",fontSize:11,cursor:"pointer"}}>{c}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:9,letterSpacing:"0.28em",color:gold,textTransform:"uppercase",marginBottom:8,fontWeight:500}}>Accident History</div>
+            <div style={{display:"flex",gap:6}}>
+              {["No","Yes","Unknown"].map(v=>(
+                <button type="button" key={v} onClick={()=>s("trade_accidents",v)} style={{padding:"7px 12px",background:f.trade_accidents===v?"rgba(201,168,76,0.15)":"transparent",border:`1px solid ${f.trade_accidents===v?"rgba(201,168,76,0.5)":"rgba(201,168,76,0.15)"}`,borderRadius:3,color:f.trade_accidents===v?gold:"#8a7d6a",fontSize:11,cursor:"pointer"}}>{v}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{marginBottom:8}}>
+          <div style={{fontSize:9,letterSpacing:"0.28em",color:gold,textTransform:"uppercase",marginBottom:8,fontWeight:500}}>Previous Owners</div>
+          <div style={{display:"flex",gap:6}}>
+            {["1","2","3+"].map(v=>(
+              <button type="button" key={v} onClick={()=>s("trade_owners",v)} style={{padding:"7px 12px",background:f.trade_owners===v?"rgba(201,168,76,0.15)":"transparent",border:`1px solid ${f.trade_owners===v?"rgba(201,168,76,0.5)":"rgba(201,168,76,0.15)"}`,borderRadius:3,color:f.trade_owners===v?gold:"#8a7d6a",fontSize:11,cursor:"pointer"}}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:9,letterSpacing:"0.28em",color:gold,textTransform:"uppercase",marginBottom:5,fontWeight:500}}>Trade Notes</div>
+          <textarea value={f.trade_notes||''} onChange={e=>s("trade_notes",e.target.value)} rows={2} placeholder="Carfax notes, condition details, modifications..." style={{width:"100%",padding:"11px 14px",background:"#1a1714",border:"1px solid rgba(201,168,76,0.22)",borderRadius:3,color:"#e8dcc8",fontSize:14,resize:"vertical",fontFamily:"'Jost',sans-serif",fontWeight:300,lineHeight:1.7}} />
+        </div>
+      </div>
+
+      <div style={{display:"flex",gap:12,justifyContent:"flex-end"}}>
+        <button onClick={onCancel} style={{padding:"11px 24px",background:"transparent",border:"1px solid rgba(255,255,255,0.08)",borderRadius:3,color:"#7a6d5a",fontSize:12,letterSpacing:"0.2em",textTransform:"uppercase"}}>Cancel</button>
+        <button onClick={()=>onSave(f)} disabled={saving} style={{padding:"11px 32px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.5)",borderRadius:3,color:gold,fontSize:12,letterSpacing:"0.2em",textTransform:"uppercase"}}>
+          {saving ? "Saving…" : "Save Client"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── CLIENT CARD ────────────────────────────────────────────────────
+function Card({client, onClick}) {
+  const ini = `${(client.first_name||"?")[0]}${(client.last_name||"?")[0]}`.toUpperCase();
+  return (
+    <div onClick={onClick} className="fu" style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:"18px 20px",cursor:"pointer",marginBottom:8,transition:"border-color 0.2s,background 0.2s"}}
+      onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.45)";e.currentTarget.style.background="#201e1a";}}
+      onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.2)";e.currentTarget.style.background="#1a1714";}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+        <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+          <div style={{width:38,height:38,borderRadius:"50%",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.3)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:13,color:gold,fontFamily:"'Cormorant Garamond',serif"}}>
+            {ini}
+          </div>
+          <div>
+            <div style={{fontSize:16,fontFamily:"'Cormorant Garamond',serif",color:"#e8dcc8",marginBottom:3}}>
+              {client.first_name} {client.last_name}
+              {client.co_buyer_first && <span style={{fontSize:13,color:"#7a6d5a",marginLeft:8}}>+ {client.co_buyer_first} {client.co_buyer_last}</span>}
+            </div>
+            <div style={{fontSize:12,color:"#7a6d5a"}}>
+              {client.cell && <span>{client.cell}</span>}
+              {client.primary_email && <span style={{marginLeft:12}}>{client.primary_email}</span>}
+            </div>
+            {client.vehicle_of_interest && <div style={{fontSize:12,color:"#8a7d6a",marginTop:4,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{client.vehicle_of_interest}</div>}
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
+          <Badge stage={client.stage} />
+          {client.lead_source && <div style={{fontSize:10,color:"#4a4038",letterSpacing:"0.15em",textTransform:"uppercase"}}>{client.lead_source}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── CLIENT DETAIL ──────────────────────────────────────────────────
+function Detail({client, onEdit, onBack, onDelete}) {
+  const [confirm, setConfirm] = useState(false);
+  const [showEmail, setShowEmail] = React.useState(false);
+  function Row({label, value}) {
+    if (!value) return null;
+    return (
+      <div style={{display:"flex",justifyContent:"space-between",paddingBottom:10,marginBottom:10,borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+        <span style={{fontSize:11,color:"#7a6d5a",letterSpacing:"0.15em",textTransform:"uppercase"}}>{label}</span>
+        <span style={{fontSize:13,color:"#c8bfa8",textAlign:"right",maxWidth:"60%"}}>{value}</span>
+      </div>
+    );
+  }
+  return (
+    <div style={{maxWidth:680,paddingBottom:60}}>
+      {showEmail && <EmailDrafter client={client} onClose={()=>setShowEmail(false)} />}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:32}}>
+        <button onClick={onBack} style={{background:"none",border:"none",color:"#6a5d4a",fontSize:12,letterSpacing:"0.2em",textTransform:"uppercase",padding:0,cursor:"pointer"}}>← Back</button>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={()=>setShowEmail(true)} style={{padding:"8px 20px",background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.4)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>✦ Draft Email</button>
+          <button onClick={onEdit} style={{padding:"8px 20px",background:"transparent",border:"1px solid rgba(184,151,90,0.3)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Edit</button>
+          {!confirm
+            ? <button onClick={()=>setConfirm(true)} style={{padding:"8px 20px",background:"transparent",border:"1px solid rgba(252,165,165,0.2)",borderRadius:3,color:"#fca5a5",fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Delete</button>
+            : <button onClick={onDelete} style={{padding:"8px 20px",background:"rgba(252,165,165,0.1)",border:"1px solid rgba(252,165,165,0.4)",borderRadius:3,color:"#fca5a5",fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Confirm Delete</button>
+          }
+        </div>
+      </div>
+      <div style={{marginBottom:28}}>
+        <div style={{display:"flex",alignItems:"baseline",gap:16,marginBottom:6}}>
+          <h1 style={{fontSize:34,color:"#e8dcc8"}}>{client.first_name} {client.last_name}</h1>
+          <Badge stage={client.stage} />
+        </div>
+        {client.vehicle_of_interest && <div style={{fontSize:18,color:"#8a7d6a",fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic"}}>{client.vehicle_of_interest}</div>}
+      </div>
+      <GLine label="Contact" />
+      <div style={{marginBottom:24}}>
+        <Row label="Cell" value={client.cell} />
+        <Row label="Home" value={client.home_phone} />
+        <Row label="Email" value={client.primary_email} />
+        <Row label="Secondary Email" value={client.secondary_email} />
+        <Row label="Birthday" value={client.birthday} />
+        <Row label="Language" value={client.preferred_language} />
+      </div>
+      {(client.street||client.city) && <><GLine label="Address" /><div style={{marginBottom:24}}><Row label="Street" value={client.street} /><Row label="City / State / Zip" value={[client.city,client.state,client.zip].filter(Boolean).join(", ")} /></div></>}
+      {client.co_buyer_first && <><GLine label="Co-Buyer" /><div style={{marginBottom:24}}><Row label="Name" value={`${client.co_buyer_first} ${client.co_buyer_last}`} /><Row label="Cell" value={client.co_buyer_cell} /><Row label="Email" value={client.co_buyer_email} /></div></>}
+      <GLine label="Deal" />
+      <div style={{marginBottom:24}}>
+        <Row label="Vehicle" value={client.vehicle_of_interest} />
+        <Row label="Lead Source" value={client.lead_source} />
+        <Row label="Stage" value={client.stage} />
+        <Row label="State" value={client.state} />
+        {client.trade_year && <Row label="Trade-In" value={`${client.trade_year} ${client.trade_make} ${client.trade_model} ${client.trade_trim||''}`} />}
+        {client.trade_mileage && <Row label="Trade Mileage" value={`${Number(client.trade_mileage).toLocaleString()} mi`} />}
+        {client.trade_year && (
+          <div style={{marginTop:8}}>
+            <button onClick={()=>{
+              sessionStorage.setItem('pinnacle_trade_prefill', JSON.stringify({
+                year:client.trade_year||'', make:client.trade_make||'', model:client.trade_model||'',
+                trim:client.trade_trim||'', mileage:client.trade_mileage||'',
+                condition:client.trade_condition||'Good', accidents:client.trade_accidents||'No',
+                owners:client.trade_owners||'1', zip:'', carfaxNotes:client.trade_notes||''
+              }));
+              onBack(); setTimeout(()=>document.querySelector('[data-nav="appraise"]')?.click(),100);
+            }} style={{padding:"7px 16px",background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.35)",borderRadius:3,color:gold,fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>✦ Appraise Trade-In</button>
+          </div>
+        )}
+      </div>
+      <GLine label="Preferences" />
+      <div style={{display:"flex",gap:12,marginBottom:24,flexWrap:"wrap"}}>
+        {[["Do Not Call",client.do_not_call],["Do Not Text",client.do_not_text],["Do Not Email",client.do_not_email]].map(([lbl,val])=>(
+          <div key={lbl} style={{padding:"8px 14px",background:val?"rgba(252,165,165,0.06)":"rgba(255,255,255,0.02)",border:`1px solid ${val?"rgba(252,165,165,0.25)":"rgba(255,255,255,0.06)"}`,borderRadius:3}}>
+            <span style={{fontSize:11,color:val?"#fca5a5":"#4a4038",letterSpacing:"0.12em",textTransform:"uppercase"}}>{lbl}: {val?"Yes":"No"}</span>
+          </div>
+        ))}
+      </div>
+      {client.notes && <><GLine label="Notes" /><div style={{padding:"16px 18px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:4,fontSize:14,color:"#8a7d6a",lineHeight:1.8}}>{client.notes}</div></>}
+    </div>
+  );
+}
+
+
+
+// ── DASHBOARD ──────────────────────────────────────────────────────
+function DashboardView({clients, onFilterStage, onFilterSource, onSelectClient}) {
+  const [convCount, setConvCount] = React.useState(0);
+  React.useEffect(()=>{
+    sb.from("jessica_conversations").select("id",{count:"exact"}).then(({count})=>setConvCount(count||0));
+  },[]);
+  const total = clients.length;
+  const byStage = STAGES.reduce((a,s)=>({...a,[s]:clients.filter(c=>c.stage===s).length}),{});
+  const closed = byStage["Closed"]||0;
+  const rate = total>0?Math.round((closed/total)*100):0;
+  const withTrade = clients.filter(c=>c.trade_year).length;
+  const tradesWon = clients.filter(c=>c.trade_year&&c.stage==="Closed").length;
+  const now = new Date();
+  const cold = clients.filter(c=>c.stage!=="Closed"&&c.stage!=="Lost"&&Math.floor((now-new Date(c.created_at))/86400000)>=5);
+  const pipeline = clients.filter(c=>c.stage==="Negotiating").length*250000;
+  const srcMap = {}; clients.forEach(c=>{if(c.lead_source)srcMap[c.lead_source]=(srcMap[c.lead_source]||0)+1;});
+  const topSrc = Object.entries(srcMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const vMap = {}; clients.forEach(c=>{if(c.vehicle_of_interest){const k=c.vehicle_of_interest.split(" ").slice(0,3).join(" ");vMap[k]=(vMap[k]||0)+1;}});
+  const topV = Object.entries(vMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const M = ({label,value,sub,color})=>(
+    <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.15)",borderRadius:4,padding:"18px 20px"}}>
+      <div style={{fontSize:9,letterSpacing:"0.35em",color:"#8a7d6a",textTransform:"uppercase",marginBottom:6}}>{label}</div>
+      <div style={{fontSize:28,fontFamily:"'Cormorant Garamond',serif",color:color||gold,lineHeight:1}}>{value}</div>
+      {sub&&<div style={{fontSize:10,color:"#554f47",marginTop:4}}>{sub}</div>}
+    </div>
+  );
+  return (
+    <div style={{maxWidth:880}}>
+      <div style={{marginBottom:24}}>
+        <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:4}}>Overview</div>
+        <h1 style={{fontSize:28,color:"#e8dcc8",fontFamily:"'Cormorant Garamond',serif"}}>Dashboard</h1>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:2,marginBottom:2}}>
+        <M label="Total Leads" value={total} sub="all time" />
+        <M label="Closing Rate" value={rate+"%"} sub={closed+" of "+total+" closed"} />
+        <M label="Pipeline Value" value={"$"+Math.round(pipeline/1000)+"k"} sub="est. negotiating" color="#e8dcc8" />
+        <M label="Cold Leads" value={cold.length} sub="5+ days no contact" color={cold.length>0?"#fca5a5":gold} />
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:2,marginBottom:16}}>
+        <M label="Trades on File" value={withTrade} sub="with trade-in" />
+        <M label="Trades to Sales" value={tradesWon} sub="closed with trade" />
+        <M label="Leads to Sales" value={closed} sub="converted" />
+        <M label="Jessica Convos" value={convCount} sub="AI conversations" color="#6fcf97" />
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2,marginBottom:2}}>
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.15)",borderRadius:4,padding:18}}>
+          <div style={{fontSize:9,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:12}}>Pipeline by Stage</div>
+          {STAGES.map(s=>{const n=byStage[s]||0;const p=total>0?Math.round((n/total)*100):0;const ss=STAGE_STYLE[s];return(
+            <div key={s} onClick={()=>onFilterStage&&onFilterStage(s)} style={{marginBottom:8,cursor:"pointer",padding:"4px 6px",borderRadius:3,transition:"background 0.15s"}}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.03)"}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                <span style={{fontSize:11,color:ss.color,textTransform:"uppercase",letterSpacing:"0.1em"}}>{s}</span>
+                <span style={{fontSize:11,color:"#8a7d6a"}}>{n}</span>
+              </div>
+              <div style={{height:2,background:"rgba(255,255,255,0.05)",borderRadius:1}}>
+                <div style={{height:2,width:p+"%",background:ss.color,borderRadius:1,opacity:0.7}} />
+              </div>
+            </div>
+          );})}
+        </div>
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.15)",borderRadius:4,padding:18}}>
+          <div style={{fontSize:9,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:12}}>Top Lead Sources</div>
+          {topSrc.length===0?<div style={{color:"#554f47",fontSize:12}}>No data yet</div>:topSrc.map(([s,n])=>(
+            <div key={s} onClick={()=>onFilterSource&&onFilterSource(s)} style={{display:"flex",justifyContent:"space-between",marginBottom:8,paddingBottom:8,borderBottom:"1px solid rgba(255,255,255,0.04)",cursor:"pointer",padding:"6px 6px",borderRadius:3,transition:"background 0.15s"}}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(201,168,76,0.05)"}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <span style={{fontSize:12,color:"#e8dcc8"}}>{s}</span>
+              <span style={{fontSize:12,color:gold}}>{n}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2}}>
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.15)",borderRadius:4,padding:18}}>
+          <div style={{fontSize:9,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:12}}>Most Enquired Vehicles</div>
+          {topV.length===0?<div style={{color:"#554f47",fontSize:12}}>No data yet</div>:topV.map(([v,n])=>(
+            <div key={v} onClick={()=>onFilterSource&&onFilterSource(v)} style={{display:"flex",justifyContent:"space-between",marginBottom:8,paddingBottom:8,borderBottom:"1px solid rgba(255,255,255,0.04)",cursor:"pointer",padding:"6px 6px",borderRadius:3,transition:"background 0.15s"}}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(201,168,76,0.05)"}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <span style={{fontSize:12,color:"#e8dcc8"}}>{v}</span>
+              <span style={{fontSize:12,color:gold}}>{n}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.15)",borderRadius:4,padding:18}}>
+          <div style={{fontSize:9,letterSpacing:"0.35em",color:"#fca5a5",textTransform:"uppercase",marginBottom:12}}>Cold Leads</div>
+          {cold.length===0?<div style={{color:"#554f47",fontSize:12}}>No cold leads!</div>:cold.slice(0,5).map(c=>{
+            const d=Math.floor((now-new Date(c.created_at))/86400000);
+            return(<div key={c.id} onClick={()=>onSelectClient&&onSelectClient(c)} style={{marginBottom:8,paddingBottom:8,borderBottom:"1px solid rgba(255,255,255,0.04)",cursor:"pointer",padding:"6px 6px",borderRadius:3,transition:"background 0.15s"}}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(252,165,165,0.05)"}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <div style={{display:"flex",justifyContent:"space-between"}}>
+                <span style={{fontSize:12,color:"#e8dcc8"}}>{c.first_name} {c.last_name}</span>
+                <span style={{fontSize:11,color:"#fca5a5"}}>{d}d</span>
+              </div>
+              <div style={{fontSize:11,color:"#8a7d6a"}}>{c.vehicle_of_interest||"—"}</div>
+            </div>);
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── JESSICA INBOX ──────────────────────────────────────────────────
+function JessicaInbox({onPushToClient}) {
+  const [convos, setConvos] = React.useState([]);
+  const [selected, setSelected] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  React.useEffect(()=>{ load(); },[]);
+  const load = async()=>{
+    setLoading(true);
+    const {data}=await sb.from("jessica_conversations").select("*").order("updated_at",{ascending:false});
+    setConvos(data||[]); setLoading(false);
+  };
+  const push = (c)=>{
+    onPushToClient({first_name:c.lead_name?c.lead_name.split(" ")[0]:"",last_name:c.lead_name?c.lead_name.split(" ").slice(1).join(" "):"",cell:c.lead_phone||"",primary_email:c.lead_email||"",vehicle_of_interest:c.vehicle_interest||"",lead_source:"Jessica AI",notes:c.summary||"",stage:"New Lead"});
+    sb.from("jessica_conversations").update({converted_to_client:true}).eq("id",c.id).then(load);
+  };
+  return (
+    <div style={{maxWidth:880}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:24}}>
+        <div>
+          <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:4}}>AI Agent</div>
+          <h1 style={{fontSize:28,color:"#e8dcc8",fontFamily:"'Cormorant Garamond',serif"}}>Jessica\'s Inbox</h1>
+        </div>
+        <div style={{display:"flex",gap:12}}>
+          <span style={{fontSize:12,color:"#6fcf97"}}>Active: {convos.filter(c=>c.status==="active").length}</span>
+          <span style={{fontSize:12,color:"#8a7d6a"}}>Total: {convos.length}</span>
+        </div>
+      </div>
+      {loading?<div style={{color:"#554f47",padding:40,textAlign:"center"}}>Loading...</div>:convos.length===0?(
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.1)",borderRadius:4,padding:40,textAlign:"center",color:"#554f47",fontSize:13}}>No conversations yet. Start a chat with Jessica in the AI Agent tab.</div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:selected?"1fr 1fr":"1fr",gap:2}}>
+          <div style={{display:"flex",flexDirection:"column",gap:2}}>
+            {convos.map(c=>(
+              <div key={c.id} onClick={()=>setSelected(c)} style={{background:selected&&selected.id===c.id?"rgba(201,168,76,0.08)":"#1a1714",border:"1px solid "+(selected&&selected.id===c.id?"rgba(201,168,76,0.4)":"rgba(201,168,76,0.1)"),borderRadius:4,padding:"14px 18px",cursor:"pointer"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <span style={{fontSize:13,color:"#e8dcc8"}}>{c.lead_name||"Unknown Lead"}</span>
+                  <div style={{display:"flex",gap:6}}>
+                    {c.converted_to_client&&<span style={{fontSize:8,color:"#6fcf97",border:"1px solid rgba(110,231,183,0.3)",padding:"2px 5px",borderRadius:2}}>ADDED</span>}
+                    {c.handoff_triggered&&<span style={{fontSize:8,color:gold,border:"1px solid rgba(201,168,76,0.3)",padding:"2px 5px",borderRadius:2}}>HANDOFF</span>}
+                    <span style={{fontSize:10,color:"#554f47"}}>{new Date(c.updated_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <div style={{fontSize:11,color:gold,marginBottom:2}}>{c.vehicle_interest||"Vehicle not specified"}</div>
+                <div style={{fontSize:11,color:"#8a7d6a"}}>{c.summary||"Conversation in progress..."}</div>
+              </div>
+            ))}
+          </div>
+          {selected&&(
+            <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:18,position:"sticky",top:20,maxHeight:"80vh",overflow:"auto"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+                <div style={{fontSize:9,letterSpacing:"0.35em",color:gold,textTransform:"uppercase"}}>Conversation Detail</div>
+                <button onClick={()=>setSelected(null)} style={{background:"none",border:"none",color:"#7a6d5a",fontSize:16,cursor:"pointer"}}>x</button>
+              </div>
+              <div style={{marginBottom:14,padding:12,background:"#0d0c0a",borderRadius:3,border:"1px solid rgba(201,168,76,0.1)"}}>
+                <div style={{fontSize:9,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:8}}>Info Gathered</div>
+                {[["Name",selected.lead_name],["Phone",selected.lead_phone],["Email",selected.lead_email],["Vehicle",selected.vehicle_interest],["Budget",selected.lead_budget],["Timeline",selected.lead_timeline]].map(([l,v])=>v?(
+                  <div key={l} style={{display:"flex",gap:10,marginBottom:4}}>
+                    <span style={{fontSize:10,color:"#8a7d6a",minWidth:55}}>{l}</span>
+                    <span style={{fontSize:11,color:"#e8dcc8"}}>{v}</span>
+                  </div>
+                ):null)}
+              </div>
+              <div style={{marginBottom:14,maxHeight:250,overflow:"auto",display:"flex",flexDirection:"column",gap:6}}>
+                {(selected.messages||[]).map((m,i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+                    <div style={{maxWidth:"80%",padding:"7px 11px",background:m.role==="user"?"rgba(201,168,76,0.1)":"#0d0c0a",border:"1px solid "+(m.role==="user"?"rgba(201,168,76,0.25)":"rgba(255,255,255,0.06)"),borderRadius:m.role==="user"?"8px 8px 2px 8px":"8px 8px 8px 2px",fontSize:11,color:m.role==="user"?gold:"#e8dcc8",lineHeight:1.5}}>
+                      {m.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {!selected.converted_to_client?(
+                <button onClick={()=>push(selected)} style={{width:"100%",padding:10,background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.45)",borderRadius:3,color:gold,fontSize:10,letterSpacing:"0.25em",textTransform:"uppercase",cursor:"pointer"}}>Push to New Client</button>
+              ):(
+                <div style={{textAlign:"center",padding:10,fontSize:12,color:"#6fcf97"}}>Already added to CRM</div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── FOLLOW-UPS ─────────────────────────────────────────────────────
+function FollowUpsView({clients}) {
+  const [drafting, setDrafting] = React.useState(null);
+  const [draft, setDraft] = React.useState(null);
+  const [generating, setGenerating] = React.useState(false);
+  const now = new Date();
+  const leads = clients.filter(c=>c.stage!=="Closed"&&c.stage!=="Lost").map(c=>{
+    const d=Math.floor((now-new Date(c.created_at))/86400000);
+    const u=d>=10?{label:"10+ days — Final reach out",color:"#fca5a5"}:d>=5?{label:"5-9 days — Create urgency",color:"#fcd34d"}:d>=2?{label:"2-4 days — Warm check-in",color:"#6fcf97"}:null;
+    return {...c,days:d,urgency:u};
+  }).filter(c=>c.urgency).sort((a,b)=>b.days-a.days);
+
+  const gen = async(c)=>{
+    setDrafting(c); setGenerating(true); setDraft(null);
+    const tone=c.days>=10?"final warm reach out, keep door open":c.days>=5?"gentle urgency, vehicle may not last":"warm check-in";
+    try {
+      const res=await fetch("/.netlify/functions/jessica",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:"You are Jessica, AI sales agent. Draft a follow-up email. Tone: "+tone+". 3-4 sentences max. Warm, never pushy. Return ONLY raw JSON no backticks: {\"subject\":\"...\",\"body\":\"...\"}",messages:[{role:"user",content:"Follow-up for: "+c.first_name+" "+c.last_name+", Vehicle: "+(c.vehicle_of_interest||"luxury vehicle")+", Days: "+c.days+". Sign off: Adam Russell, Luxury Sales Advisor, Pinnacle CRM, adam@pinnaclecrm.ai"}]})});
+      const data=await res.json();
+      const text=(data.content?.[0]?.text||"{}").replace(/^```[\w]*\n?/,"").replace(/\n?```$/,"").trim();
+      setDraft(JSON.parse(text));
+    } catch(e){setDraft({subject:"Follow-up",body:"Error: "+e.message});}
+    setGenerating(false);
+  };
+
+  return (
+    <div style={{maxWidth:800}}>
+      <div style={{marginBottom:24}}>
+        <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:4}}>Sequences</div>
+        <h1 style={{fontSize:28,color:"#e8dcc8",fontFamily:"'Cormorant Garamond',serif"}}>Follow-Ups</h1>
+      </div>
+      {leads.length===0?(
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.1)",borderRadius:4,padding:40,textAlign:"center"}}>
+          <div style={{fontSize:20,marginBottom:6}}>All caught up!</div>
+          <div style={{fontSize:12,color:"#554f47"}}>No leads need follow-up right now</div>
+        </div>
+      ):(
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>
+          {leads.map(c=>(
+            <div key={c.id} style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.1)",borderRadius:4,padding:"14px 18px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                    <span style={{fontSize:14,color:"#e8dcc8"}}>{c.first_name} {c.last_name}</span>
+                    <span style={{fontSize:8,color:c.urgency.color,border:"1px solid "+c.urgency.color+"44",padding:"2px 6px",borderRadius:2,textTransform:"uppercase",letterSpacing:"0.15em"}}>{c.urgency.label}</span>
+                  </div>
+                  <div style={{fontSize:11,color:gold,marginBottom:2}}>{c.vehicle_of_interest||"—"}</div>
+                  <div style={{fontSize:10,color:"#554f47"}}>{c.days} days since added</div>
+                </div>
+                <button onClick={()=>gen(c)} style={{padding:"7px 14px",background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.35)",borderRadius:3,color:gold,fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer",whiteSpace:"nowrap"}}>Draft Email</button>
+              </div>
+              {drafting&&drafting.id===c.id&&(
+                <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(201,168,76,0.1)"}}>
+                  {generating?(
+                    <div style={{display:"flex",gap:5,alignItems:"center",color:"#8a7d6a",fontSize:12}}>
+                      {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:gold,opacity:0.6,animation:"fadeUp 1.2s ease-in-out "+(i*0.2)+"s infinite"}} />)}
+                      <span style={{marginLeft:4}}>Drafting...</span>
+                    </div>
+                  ):draft&&(
+                    <div>
+                      <div style={{marginBottom:8,padding:"8px 10px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.15)",borderRadius:3,fontSize:12,color:"#e8dcc8"}}>{draft.subject}</div>
+                      <textarea value={draft.body} onChange={e=>setDraft({...draft,body:e.target.value})} rows={4} style={{width:"100%",padding:"9px 10px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.15)",borderRadius:3,color:"#e8dcc8",fontSize:12,lineHeight:1.6,resize:"vertical",fontFamily:"Jost,sans-serif",fontWeight:300,marginBottom:8}} />
+                      <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                        <button onClick={()=>{setDrafting(null);setDraft(null);}} style={{padding:"6px 12px",background:"transparent",border:"1px solid rgba(255,255,255,0.08)",borderRadius:3,color:"#7a6d5a",fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer"}}>Dismiss</button>
+                        <button onClick={()=>navigator.clipboard.writeText(draft.body)} style={{padding:"6px 12px",background:"transparent",border:"1px solid rgba(201,168,76,0.25)",borderRadius:3,color:gold,fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer"}}>Copy</button>
+                        <button onClick={()=>window.open("mailto:"+c.primary_email+"?subject="+encodeURIComponent(draft.subject)+"&body="+encodeURIComponent(draft.body))} style={{padding:"6px 14px",background:"rgba(201,168,76,0.12)",border:"1px solid rgba(201,168,76,0.4)",borderRadius:3,color:gold,fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer"}}>Open in Mail</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── INVENTORY VIEW ──────────────────────────────────────────────────
+function InventoryView() {
+  const [vehicles, setVehicles] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('pinnacle_inventory') || '[]'); } catch { return []; }
+  });
+  const [showAdd, setShowAdd] = React.useState(false);
+  const [editIdx, setEditIdx] = React.useState(null);
+  const [notify, setNotify] = React.useState(null);
+  const [notifyDraft, setNotifyDraft] = React.useState(null);
+  const [generating, setGenerating] = React.useState(false);
+  const emptyVehicle = {year:'',make:'',model:'',trim:'',vin:'',mileage:'',color:'',price:'',oldPrice:'',status:'Available',notes:''};
+  const [form, setForm] = React.useState(emptyVehicle);
+
+  const save = () => {
+    const updated = editIdx !== null
+      ? vehicles.map((v,i) => i===editIdx ? form : v)
+      : [...vehicles, {...form, id: Date.now()}];
+    setVehicles(updated);
+    localStorage.setItem('pinnacle_inventory', JSON.stringify(updated));
+    setShowAdd(false); setEditIdx(null); setForm(emptyVehicle);
+  };
+
+  const remove = (idx) => {
+    const updated = vehicles.filter((_,i) => i!==idx);
+    setVehicles(updated);
+    localStorage.setItem('pinnacle_inventory', JSON.stringify(updated));
+  };
+
+  const startEdit = (idx) => { setForm(vehicles[idx]); setEditIdx(idx); setShowAdd(true); };
+
+  const generatePriceDropNotification = async (vehicle) => {
+    setNotify(vehicle);
+    setGenerating(true);
+    setNotifyDraft(null);
+    try {
+      const res = await fetch("/.netlify/functions/jessica", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          system: `You are Jessica, AI sales agent for Pinnacle CRM. Draft a price drop notification email for a luxury vehicle. Be warm, exciting, create urgency without being pushy. Keep it to 4-5 sentences. Return ONLY raw JSON: {"subject":"...","body":"..."}. No backticks, no markdown.`,
+          messages: [{role:"user", content:`Draft a price drop notification for:
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim}
+Previous Price: $${Number(vehicle.oldPrice).toLocaleString()}
+New Price: $${Number(vehicle.price).toLocaleString()}
+Savings: $${(Number(vehicle.oldPrice)-Number(vehicle.price)).toLocaleString()}
+Color: ${vehicle.color}
+Mileage: ${vehicle.mileage}
+Sign off as Adam Russell, Luxury Sales Advisor, Pinnacle CRM, adam@pinnaclecrm.ai`}]
+        })
+      });
+      const data = await res.json();
+      const text = (data.content?.[0]?.text||'{}').replace(/^```[\w]*\n?/m,'').replace(/\n?```$/m,'').trim();
+      const draft = JSON.parse(text);
+      setNotifyDraft(draft);
+    } catch(e) { setNotifyDraft({subject:'Price Drop Alert', body:'Could not generate draft: '+e.message}); }
+    setGenerating(false);
+  };
+
+  const s = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  return (
+    <div style={{maxWidth:800}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:28}}>
+        <div>
+          <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:6}}>Inventory</div>
+          <h1 style={{fontSize:30,color:"#e8dcc8",fontFamily:"'Cormorant Garamond',serif"}}>Vehicle Inventory</h1>
+        </div>
+        <button onClick={()=>{setForm(emptyVehicle);setEditIdx(null);setShowAdd(true);}} style={{padding:"11px 22px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.45)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.22em",textTransform:"uppercase",cursor:"pointer"}}>+ Add Vehicle</button>
+      </div>
+
+      {/* Add/Edit Form */}
+      {showAdd && (
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:24,marginBottom:24}}>
+          <div style={{fontSize:10,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:16}}>{editIdx!==null?'Edit Vehicle':'New Vehicle'}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+            {[['Year','year'],['Make','make'],['Model','model'],['Trim','trim'],['Color','color'],['VIN','vin']].map(([lbl,key])=>(
+              <div key={key}>
+                <div style={{fontSize:9,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:5}}>{lbl}</div>
+                <input value={form[key]} onChange={e=>s(key,e.target.value)} style={{width:"100%",padding:"9px 12px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:"#e8dcc8",fontSize:13}} />
+              </div>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+            {[['Mileage','mileage'],['Current Price ($)','price'],['Previous Price ($)','oldPrice']].map(([lbl,key])=>(
+              <div key={key}>
+                <div style={{fontSize:9,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:5}}>{lbl}</div>
+                <input value={form[key]} onChange={e=>s(key,e.target.value)} type="number" style={{width:"100%",padding:"9px 12px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:"#e8dcc8",fontSize:13}} />
+              </div>
+            ))}
+          </div>
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:9,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:5}}>Notes</div>
+            <textarea value={form.notes} onChange={e=>s('notes',e.target.value)} rows={2} style={{width:"100%",padding:"9px 12px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:"#e8dcc8",fontSize:13,resize:"vertical"}} />
+          </div>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <button onClick={()=>{setShowAdd(false);setEditIdx(null);}} style={{padding:"9px 20px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:3,color:"#7a6d5a",fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Cancel</button>
+            <button onClick={save} style={{padding:"9px 22px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.45)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Save Vehicle</button>
+          </div>
+        </div>
+      )}
+
+      {/* Vehicle List */}
+      {vehicles.length === 0 ? (
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.1)",borderRadius:4,padding:48,textAlign:"center",color:"#554f47",fontSize:13}}>No vehicles in inventory yet — add your first one above.</div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>
+          {vehicles.map((v,i)=>(
+            <div key={v.id||i} style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.1)",borderRadius:4,padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,color:"#e8dcc8",marginBottom:3}}>{v.year} {v.make} {v.model} {v.trim}</div>
+                <div style={{fontSize:12,color:"#8a7d6a"}}>{v.color} · {v.mileage?Number(v.mileage).toLocaleString()+' mi':''} · VIN: {v.vin||'—'}</div>
+              </div>
+              <div style={{textAlign:"right",minWidth:120}}>
+                <div style={{fontSize:18,color:gold,fontFamily:"'Cormorant Garamond',serif"}}>${Number(v.price).toLocaleString()}</div>
+                {v.oldPrice && Number(v.oldPrice) > Number(v.price) && (
+                  <div style={{fontSize:11,color:"#fca5a5",textDecoration:"line-through"}}>${Number(v.oldPrice).toLocaleString()}</div>
+                )}
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                {v.oldPrice && Number(v.oldPrice) > Number(v.price) && (
+                  <button onClick={()=>generatePriceDropNotification(v)} style={{padding:"7px 14px",background:"rgba(252,211,77,0.08)",border:"1px solid rgba(252,211,77,0.25)",borderRadius:3,color:"#fcd34d",fontSize:10,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer"}}>↓ Notify</button>
+                )}
+                <button onClick={()=>startEdit(i)} style={{padding:"7px 14px",background:"transparent",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:gold,fontSize:10,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer"}}>Edit</button>
+                <button onClick={()=>remove(i)} style={{padding:"7px 14px",background:"transparent",border:"1px solid rgba(252,165,165,0.2)",borderRadius:3,color:"#fca5a5",fontSize:10,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer"}}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Price Drop Notification Modal */}
+      {notify && (
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.75)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.3)",borderRadius:8,width:"100%",maxWidth:580,maxHeight:"85vh",overflow:"auto"}}>
+            <div style={{padding:"20px 24px",borderBottom:"1px solid rgba(201,168,76,0.15)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:10,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:4}}>Price Drop Alert</div>
+                <div style={{fontSize:15,color:"#e8dcc8"}}>{notify.year} {notify.make} {notify.model} — ${Number(notify.price).toLocaleString()}</div>
+              </div>
+              <button onClick={()=>{setNotify(null);setNotifyDraft(null);}} style={{background:"none",border:"none",color:"#7a6d5a",fontSize:18,cursor:"pointer"}}>✕</button>
+            </div>
+            <div style={{padding:24}}>
+              {generating && (
+                <div style={{textAlign:"center",padding:"32px 0"}}>
+                  <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:12}}>
+                    {[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:gold,animation:`fadeUp 1.2s ease-in-out ${i*0.2}s infinite`,opacity:0.6}} />)}
+                  </div>
+                  <div style={{fontSize:13,color:"#8a7d6a"}}>Jessica is drafting your notification…</div>
+                </div>
+              )}
+              {notifyDraft && !generating && (
+                <div>
+                  <div style={{marginBottom:16}}>
+                    <div style={{fontSize:10,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:8}}>Subject</div>
+                    <div style={{padding:"11px 14px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,fontSize:14,color:"#e8dcc8"}}>{notifyDraft.subject}</div>
+                  </div>
+                  <div style={{marginBottom:20}}>
+                    <div style={{fontSize:10,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:8}}>Email Body</div>
+                    <textarea value={notifyDraft.body} onChange={e=>setNotifyDraft({...notifyDraft,body:e.target.value})} rows={8} style={{width:"100%",padding:"12px 14px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:"#e8dcc8",fontSize:13,lineHeight:1.7,resize:"vertical",fontFamily:"'Jost',sans-serif",fontWeight:300}} />
+                    <div style={{fontSize:11,color:"#554f47",marginTop:5}}>Edit before sending. This goes to all clients who enquired about this vehicle.</div>
+                  </div>
+                  <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+                    <button onClick={()=>generatePriceDropNotification(notify)} style={{padding:"9px 18px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:3,color:"#7a6d5a",fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>↺ Regenerate</button>
+                    <button onClick={()=>{navigator.clipboard.writeText(notifyDraft.body);}} style={{padding:"9px 18px",background:"transparent",border:"1px solid rgba(201,168,76,0.3)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Copy</button>
+                    <button onClick={()=>window.open(`mailto:?subject=${encodeURIComponent(notifyDraft.subject)}&body=${encodeURIComponent(notifyDraft.body)}`)} style={{padding:"9px 22px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.45)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Open in Mail ↗</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── APPRAISAL VIEW ──────────────────────────────────────────────────
+function AppraisalView() {
+  const [step, setStep] = React.useState(1);
+  const [form, setForm] = React.useState(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('pinnacle_trade_prefill') || 'null');
+      if (saved) { sessionStorage.removeItem('pinnacle_trade_prefill'); return saved; }
+    } catch {}
+    return { year:'', make:'', model:'', trim:'', mileage:'', condition:'Good', accidents:'No', owners:'1', zip:'', carfaxNotes:'' };
+  });
+  const [result, setResult] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const conditions = ['Excellent','Good','Fair','Poor'];
+  const [vin, setVin] = React.useState('');
+  const [vinLoading, setVinLoading] = React.useState(false);
+  const [vinError, setVinError] = React.useState('');
+  const s = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const decodeVin = async () => {
+    if (!vin || vin.length !== 17) { setVinError('VIN must be exactly 17 characters'); return; }
+    setVinLoading(true); setVinError('');
+    try {
+      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`);
+      const data = await res.json();
+      const get = (var_) => data.Results?.find(r => r.Variable === var_)?.Value || '';
+      const year = get('Model Year');
+      const make = get('Make');
+      const model = get('Model');
+      const trim = get('Trim') || get('Series') || '';
+      if (!year || !make || !model) { setVinError('Could not decode VIN — please check and try again'); setVinLoading(false); return; }
+      s('year', year); s('make', make); s('model', model); s('trim', trim);
+      setVinError('');
+    } catch(e) { setVinError('Decode failed — check your connection'); }
+    setVinLoading(false);
+  };
+
+  const runAppraisal = async () => {
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch("/.netlify/functions/jessica", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          system: `You are Jessica, a luxury automotive appraisal specialist for Pinnacle CRM. You have deep knowledge of current market values for luxury and exotic vehicles. Use your knowledge of current market conditions, depreciation curves, and comparable sales to give a precise, credible trade-in appraisal range. Be confident and specific. Return ONLY raw JSON with no backticks: {"trade_in_low": number, "trade_in_high": number, "retail_low": number, "retail_high": number, "summary": "2-3 sentence explanation", "factors": ["factor1","factor2","factor3"], "recommendation": "one sentence advice for the dealer"}`,
+          messages: [{role:"user", content:`Appraise this vehicle:
+Year: ${form.year}
+Make: ${form.make}
+Model: ${form.model}
+Trim: ${form.trim}
+Mileage: ${form.mileage}
+Condition: ${form.condition}
+Accident History: ${form.accidents}
+Previous Owners: ${form.owners}
+Customer ZIP: ${form.zip}
+Carfax/Additional Notes: ${form.carfaxNotes||'None provided'}
+
+Provide current market trade-in range and retail range based on real market data for this vehicle.`}]
+        })
+      });
+      const data = await res.json();
+      const text = (data.content?.[0]?.text||'{}').replace(/^```[\w]*\n?/m,'').replace(/\n?```$/m,'').trim();
+      setResult(JSON.parse(text));
+      setStep(3);
+    } catch(e) { alert('Appraisal failed: '+e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{maxWidth:680}}>
+      <div style={{marginBottom:28}}>
+        <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:6}}>Appraisal Tool</div>
+        <h1 style={{fontSize:30,color:"#e8dcc8",fontFamily:"'Cormorant Garamond',serif"}}>Vehicle Appraisal</h1>
+      </div>
+
+      {/* Step indicators */}
+      <div style={{display:"flex",gap:0,marginBottom:28}}>
+        {[['1','Vehicle Info'],['2','History'],['3','Results']].map(([n,lbl],i)=>(
+          <div key={n} style={{display:"flex",alignItems:"center",gap:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 16px",background:step===i+1?"rgba(201,168,76,0.12)":"transparent",border:`1px solid ${step===i+1?"rgba(201,168,76,0.4)":"rgba(201,168,76,0.1)"}`,borderRadius:3}}>
+              <div style={{width:18,height:18,borderRadius:"50%",background:step>i?"rgba(201,168,76,0.3)":"rgba(255,255,255,0.05)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:step>i?gold:"#554f47"}}>{n}</div>
+              <span style={{fontSize:11,color:step===i+1?gold:"#554f47",letterSpacing:"0.15em",textTransform:"uppercase"}}>{lbl}</span>
+            </div>
+            {i<2 && <div style={{width:20,height:1,background:"rgba(201,168,76,0.15)"}} />}
+          </div>
+        ))}
+      </div>
+
+      {step===1 && (
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:24}}>
+          <div style={{fontSize:10,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:16}}>Vehicle Details</div>
+          
+          {/* VIN Decoder */}
+          <div style={{marginBottom:20,padding:16,background:"rgba(201,168,76,0.04)",border:"1px solid rgba(201,168,76,0.15)",borderRadius:3}}>
+            <div style={{fontSize:9,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:8}}>VIN Decoder — Auto-Fill</div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <input value={vin} onChange={e=>setVin(e.target.value.toUpperCase())} maxLength={17} placeholder="Enter 17-character VIN..." style={{flex:1,padding:"9px 12px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:"#e8dcc8",fontSize:13,letterSpacing:"0.05em",fontFamily:"monospace"}} />
+              <button onClick={decodeVin} disabled={vinLoading} style={{padding:"9px 18px",background:vinLoading?"rgba(201,168,76,0.05)":"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.35)",borderRadius:3,color:vinLoading?"#554f47":gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:vinLoading?"not-allowed":"pointer",whiteSpace:"nowrap"}}>
+                {vinLoading ? "Decoding…" : "Decode ✦"}
+              </button>
+            </div>
+            {vinError && <div style={{fontSize:11,color:"#fca5a5",marginTop:6}}>{vinError}</div>}
+            <div style={{fontSize:10,color:"#554f47",marginTop:6}}>Automatically fills Year, Make, Model, and Trim from the VIN.</div>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+            {[['Year','year'],['Make','make'],['Model','model'],['Trim Level','trim'],['Mileage','mileage'],['Customer ZIP','zip']].map(([lbl,key])=>(
+              <div key={key}>
+                <div style={{fontSize:9,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:5}}>{lbl}</div>
+                <input value={form[key]} onChange={e=>s(key,e.target.value)} style={{width:"100%",padding:"9px 12px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:"#e8dcc8",fontSize:13}} />
+              </div>
+            ))}
+          </div>
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:9,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:8}}>Condition</div>
+            <div style={{display:"flex",gap:8}}>
+              {conditions.map(c=>(
+                <button key={c} onClick={()=>s('condition',c)} style={{padding:"8px 16px",background:form.condition===c?"rgba(201,168,76,0.15)":"transparent",border:`1px solid ${form.condition===c?"rgba(201,168,76,0.5)":"rgba(201,168,76,0.15)"}`,borderRadius:3,color:form.condition===c?gold:"#8a7d6a",fontSize:11,letterSpacing:"0.15em",cursor:"pointer"}}>{c}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{display:"flex",justifyContent:"flex-end"}}>
+            <button onClick={()=>setStep(2)} style={{padding:"10px 24px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.45)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Next →</button>
+          </div>
+        </div>
+      )}
+
+      {step===2 && (
+        <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:24}}>
+          <div style={{fontSize:10,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:16}}>Vehicle History</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+            <div>
+              <div style={{fontSize:9,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:8}}>Accident History</div>
+              <div style={{display:"flex",gap:8}}>
+                {['No','Yes','Unknown'].map(v=>(
+                  <button key={v} onClick={()=>s('accidents',v)} style={{padding:"8px 14px",background:form.accidents===v?"rgba(201,168,76,0.15)":"transparent",border:`1px solid ${form.accidents===v?"rgba(201,168,76,0.5)":"rgba(201,168,76,0.15)"}`,borderRadius:3,color:form.accidents===v?gold:"#8a7d6a",fontSize:11,cursor:"pointer"}}>{v}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:9,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:8}}>Previous Owners</div>
+              <div style={{display:"flex",gap:8}}>
+                {['1','2','3+'].map(v=>(
+                  <button key={v} onClick={()=>s('owners',v)} style={{padding:"8px 14px",background:form.owners===v?"rgba(201,168,76,0.15)":"transparent",border:`1px solid ${form.owners===v?"rgba(201,168,76,0.5)":"rgba(201,168,76,0.15)"}`,borderRadius:3,color:form.owners===v?gold:"#8a7d6a",fontSize:11,cursor:"pointer"}}>{v}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:9,letterSpacing:"0.3em",color:gold,textTransform:"uppercase",marginBottom:5}}>Carfax Notes / Additional History</div>
+            <div style={{fontSize:11,color:"#554f47",marginBottom:8}}>Ask the customer to pull their free report at carfax.com and share any relevant details here.</div>
+            <textarea value={form.carfaxNotes} onChange={e=>s('carfaxNotes',e.target.value)} rows={3} placeholder="e.g. Clean title, 2 owners, last serviced at dealer 6 months ago..." style={{width:"100%",padding:"10px 12px",background:"#0d0c0a",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:"#e8dcc8",fontSize:13,resize:"vertical",fontFamily:"'Jost',sans-serif",fontWeight:300}} />
+          </div>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <button onClick={()=>setStep(1)} style={{padding:"10px 20px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:3,color:"#7a6d5a",fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>← Back</button>
+            <button onClick={runAppraisal} disabled={loading} style={{padding:"10px 24px",background:loading?"rgba(201,168,76,0.08)":"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.45)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:loading?"not-allowed":"pointer"}}>
+              {loading ? "Appraising…" : "Run Appraisal ✦"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step===3 && result && (
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {/* Value boxes */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2}}>
+            <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:24,textAlign:"center"}}>
+              <div style={{fontSize:9,letterSpacing:"0.4em",color:"#8a7d6a",textTransform:"uppercase",marginBottom:10}}>Trade-In Range</div>
+              <div style={{fontSize:28,color:gold,fontFamily:"'Cormorant Garamond',serif"}}>${result.trade_in_low?.toLocaleString()} – ${result.trade_in_high?.toLocaleString()}</div>
+            </div>
+            <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:4,padding:24,textAlign:"center"}}>
+              <div style={{fontSize:9,letterSpacing:"0.4em",color:"#8a7d6a",textTransform:"uppercase",marginBottom:10}}>Retail Range</div>
+              <div style={{fontSize:28,color:"#e8dcc8",fontFamily:"'Cormorant Garamond',serif"}}>${result.retail_low?.toLocaleString()} – ${result.retail_high?.toLocaleString()}</div>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div style={{background:"#1a1714",border:"1px solid rgba(201,168,76,0.15)",borderRadius:4,padding:20}}>
+            <div style={{fontSize:9,letterSpacing:"0.35em",color:gold,textTransform:"uppercase",marginBottom:10}}>Market Analysis</div>
+            <div style={{fontSize:14,color:"#e8dcc8",lineHeight:1.7,marginBottom:14}}>{result.summary}</div>
+            {result.factors && (
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {result.factors.map((f,i)=>(
+                  <div key={i} style={{padding:"5px 12px",background:"rgba(201,168,76,0.08)",border:"1px solid rgba(201,168,76,0.2)",borderRadius:20,fontSize:11,color:"#8a7d6a"}}>{f}</div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Dealer recommendation */}
+          {result.recommendation && (
+            <div style={{background:"rgba(110,231,183,0.05)",border:"1px solid rgba(110,231,183,0.2)",borderRadius:4,padding:16}}>
+              <div style={{fontSize:9,letterSpacing:"0.35em",color:"#6fcf97",textTransform:"uppercase",marginBottom:6}}>Dealer Recommendation</div>
+              <div style={{fontSize:13,color:"#e8dcc8",lineHeight:1.6}}>{result.recommendation}</div>
+            </div>
+          )}
+
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <button onClick={()=>{setStep(1);setForm({year:'',make:'',model:'',trim:'',mileage:'',condition:'Good',accidents:'No',owners:'1',zip:'',carfaxNotes:''});setResult(null);}} style={{padding:"10px 20px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:3,color:"#7a6d5a",fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>New Appraisal</button>
+            <button onClick={()=>window.print()} style={{padding:"10px 22px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.45)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Print Report</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── MAIN APP ───────────────────────────────────────────────────────
+function App() {
+  const [view, setView] = useState("list");
+  const [clients, setClients] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [stageFilter, setStageFilter] = useState("All");
+  const isSetup = SUPABASE_URL === "YOUR_SUPABASE_URL";
+
+  useEffect(() => { if (!isSetup) fetch(); else setLoading(false); }, []);
+
+  async function fetch() {
+    setLoading(true);
+    const { data } = await sb.from("clients").select("*").order("created_at",{ascending:false});
+    setClients(data||[]);
+    setLoading(false);
+  }
+
+  async function handleSave(form) {
+    setSaving(true);
+    if (view==="edit" && selected) {
+      await sb.from("clients").update(form).eq("id",selected.id);
+      setSelected({...selected,...form});
+      setView("detail");
+    } else {
+      await sb.from("clients").insert([form]);
+      setView("list");
+    }
+    await fetch();
+    setSaving(false);
+  }
+
+  async function handleDelete() {
+    await sb.from("clients").delete().eq("id",selected.id);
+    await fetch();
+    setView("list");
+    setSelected(null);
+  }
+
+  if (isSetup) return <Setup />;
+
+  const filtered = clients.filter(c => {
+    const q = search.toLowerCase();
+    const ms = !q || `${c.first_name} ${c.last_name} ${c.cell} ${c.primary_email} ${c.vehicle_of_interest}`.toLowerCase().includes(q);
+    const mst = stageFilter==="All" || c.stage===stageFilter;
+    return ms && mst;
+  });
+
+  const counts = STAGES.reduce((a,s)=>({...a,[s]:clients.filter(c=>c.stage===s).length}),{});
+
+  const nav = (v) => { setView(v); setSelected(null); };
+
+  return (
+    <div style={{minHeight:"100vh",display:"flex"}}>
+      {/* SIDEBAR */}
+      <div style={{width:210,background:"#131110",borderRight:"1px solid rgba(201,168,76,0.15)",display:"flex",flexDirection:"column",flexShrink:0,position:"fixed",top:0,bottom:0,left:0,zIndex:10}}>
+        <div style={{padding:"24px 20px 16px",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center"}}>
+          <svg width="36" height="36" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style={{marginBottom:10}}>
+            <polygon points="26,2 50,14 50,38 26,50 2,38 2,14" stroke="#c9a84c" strokeWidth="1.2" fill="none"/>
+            <polygon points="26,8 44,17 44,35 26,44 8,35 8,17" stroke="#c9a84c" strokeWidth="0.6" fill="none" opacity="0.35"/>
+            <polygon points="26,14 38,21 38,31 26,38 14,31 14,21" stroke="#c9a84c" strokeWidth="0.4" fill="none" opacity="0.18"/>
+            <text x="26" y="31" textAnchor="middle" fontFamily="Cinzel,serif" fontSize="14" fontWeight="500" fill="#c9a84c">P</text>
+          </svg>
+          <div style={{fontFamily:"'Cinzel',serif",fontSize:14,fontWeight:500,letterSpacing:"0.35em",color:"#e8dcc8",textTransform:"uppercase",lineHeight:1}}>Pinnacle</div>
+          <div style={{fontFamily:"'Jost',sans-serif",fontWeight:200,fontSize:7,letterSpacing:"0.45em",color:"#c9a84c",textTransform:"uppercase",marginTop:5}}>Luxury Automotive Group</div>
+          <div style={{fontFamily:"'Jost',sans-serif",fontWeight:300,fontSize:6.5,letterSpacing:"0.3em",color:"#8a7d6a",textTransform:"uppercase",marginTop:4,padding:"2px 8px",border:"1px solid rgba(138,125,106,0.25)"}}>CRM</div>
+        </div>
+        <div style={{height:1,background:"rgba(201,168,76,0.15)",margin:"0 24px 20px"}} />
+        <nav style={{padding:"0 12px",flex:1}}>
+          {[["Dashboard","dashboard"],["Clients","list"],["AI Agent","agent"],["Inbox","inbox"],["Follow-Ups","followups"],["Inventory","inventory"],["Appraisal","appraise"],["New Lead","new"]].map(([lbl,v])=>(
+            <button key={v} data-nav={v} onClick={()=>nav(v)} style={{width:"100%",padding:"10px 12px",background:view===v?"rgba(201,168,76,0.12)":"transparent",border:view===v?"1px solid rgba(201,168,76,0.25)":"1px solid transparent",borderRadius:3,color:view===v?gold:"#9a8d7a",fontSize:12,letterSpacing:"0.18em",textTransform:"uppercase",textAlign:"left",marginBottom:4,cursor:"pointer",transition:"all 0.2s"}}>
+              {lbl}
+            </button>
+          ))}
+        </nav>
+        <div style={{padding:"16px 24px",borderTop:"1px solid rgba(201,168,76,0.12)"}}>
+          <div style={{fontSize:9,letterSpacing:"0.35em",color:"#8a7d6a",textTransform:"uppercase",marginBottom:10}}>Pipeline</div>
+          {STAGES.map(s=>{
+            const sc=STAGE_STYLE[s];
+            return <div key={s} style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:11,color:"#6a5d4a"}}>{s}</span><span style={{fontSize:11,color:sc.color,fontWeight:500}}>{counts[s]||0}</span></div>;
+          })}
+        </div>
+        <div style={{padding:"12px 24px",borderTop:"1px solid rgba(201,168,76,0.1)"}}>
+          <div style={{fontSize:10,color:"#7a6d5a"}}>Pinnacle AI · v1.0</div>
+        </div>
+      </div>
+
+      {/* MAIN */}
+      <div style={{marginLeft:210,padding:"40px 48px",flex:1,minHeight:"100vh"}}>
+        {view==="list" && <>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:28}}>
+            <div>
+              <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:6}}>All Clients</div>
+              <h1 style={{fontSize:30,color:"#e8dcc8"}}>Client Roster</h1>
+            </div>
+            <button onClick={()=>nav("new")} style={{padding:"11px 22px",background:"rgba(201,168,76,0.22)",border:"1px solid rgba(201,168,76,0.7)",borderRadius:3,color:gold,fontSize:11,letterSpacing:"0.22em",textTransform:"uppercase",cursor:"pointer"}}>+ New Lead</button>
+          </div>
+          <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap"}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search clients…" style={{flex:1,minWidth:180,padding:"9px 14px",background:"#1a1714",border:"1px solid rgba(201,168,76,0.2)",borderRadius:3,color:"#e8dcc8",fontSize:13,fontFamily:"'Jost',sans-serif",fontWeight:300}} />
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {["All",...STAGES].map(s=>(
+                <button key={s} onClick={()=>setStageFilter(s)} style={{padding:"8px 12px",background:stageFilter===s?"rgba(201,168,76,0.15)":"transparent",border:`1px solid ${stageFilter===s?"rgba(201,168,76,0.45)":"rgba(255,255,255,0.06)"}`,borderRadius:3,color:stageFilter===s?gold:"#9a8d7a",fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",cursor:"pointer",transition:"all 0.2s",whiteSpace:"nowrap"}}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          {loading && <div style={{textAlign:"center",padding:"60px 0",color:"#4a4038"}}>Loading…</div>}
+          {!loading && filtered.length===0 && <div style={{textAlign:"center",padding:"80px 0"}}><p style={{fontSize:14,color:"#8a7d6a",lineHeight:1.8}}>{search||stageFilter!=="All"?"No clients match your search.":"No clients yet. Add your first lead."}</p></div>}
+          {!loading && filtered.map(c=><Card key={c.id} client={c} onClick={()=>{setSelected(c);setView("detail");}} />)}
+        </>}
+
+        {view==="new" && <>
+          <div style={{marginBottom:32}}>
+            <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:6}}>New Lead</div>
+            <h1 style={{fontSize:30,color:"#e8dcc8"}}>Add Client</h1>
+          </div>
+          <ClientForm onSave={handleSave} onCancel={()=>nav("list")} saving={saving} />
+        </>}
+
+        {view==="agent" && <AgentView />}
+        {view==="dashboard" && <DashboardView clients={clients}
+          onFilterStage={(s)=>{setStageFilter(s);nav("list");}}
+          onFilterSource={(s)=>{setSearch(s);nav("list");}}
+          onSelectClient={(c)=>{setSelected(c);setView("detail");}}
+        />}
+        {view==="inbox" && <JessicaInbox onPushToClient={(d)=>{setView("new"); window._prefill=d;}} />}
+        {view==="followups" && <FollowUpsView clients={clients} />}
+        {view==="inventory" && <InventoryView />}
+        {view==="appraise" && <AppraisalView />}
+        {view==="detail" && selected && <Detail client={selected} onBack={()=>nav("list")} onEdit={()=>setView("edit")} onDelete={handleDelete} />}
+
+        {view==="edit" && selected && <>
+          <div style={{marginBottom:32}}>
+            <div style={{fontSize:10,letterSpacing:"0.4em",color:gold,textTransform:"uppercase",marginBottom:6}}>Editing</div>
+            <h1 style={{fontSize:30,color:"#e8dcc8"}}>{selected.first_name} {selected.last_name}</h1>
+          </div>
+          <ClientForm initial={selected} onSave={handleSave} onCancel={()=>setView("detail")} saving={saving} />
+        </>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

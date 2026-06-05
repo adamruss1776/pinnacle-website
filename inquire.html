@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pinnacle CRM — Lead Intake</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d0c0a; --card: #1a1714; --border: rgba(201,168,76,0.2);
+  --gold: #d4a843; --text: #e8dcc8; --muted: #8a7d6a; --dim: #554f47; --green: #6fcf97;
+}
+body { background: var(--bg); color: var(--text); font-family: 'Jost', sans-serif; font-weight: 300; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+
+.form-wrap { width: 100%; max-width: 560px; }
+
+.form-header { text-align: center; margin-bottom: 36px; }
+.form-crest { margin-bottom: 12px; }
+.form-title { font-family: 'Cinzel', serif; font-size: 22px; letter-spacing: 0.3em; color: var(--text); text-transform: uppercase; margin-bottom: 6px; }
+.form-sub { font-size: 11px; letter-spacing: 0.35em; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
+.form-desc { font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 10px; }
+
+.form-card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 32px; }
+
+.form-section { font-size: 9px; letter-spacing: 0.4em; color: var(--gold); text-transform: uppercase; margin: 20px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.form-section:first-child { margin-top: 0; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.form-label { font-size: 9px; letter-spacing: 0.35em; color: var(--gold); text-transform: uppercase; }
+.form-input { padding: 11px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 2px; color: var(--text); font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 300; outline: none; transition: border-color 0.2s; width: 100%; }
+.form-input:focus { border-color: rgba(201,168,76,0.5); }
+.form-input::placeholder { color: var(--dim); }
+select.form-input { cursor: pointer; }
+select.form-input option { background: #1a1714; }
+
+.submit-btn { width: 100%; padding: 14px; background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.45); color: var(--gold); font-family: 'Jost', sans-serif; font-size: 11px; letter-spacing: 0.35em; text-transform: uppercase; cursor: pointer; border-radius: 2px; transition: all 0.2s; margin-top: 8px; }
+.submit-btn:hover { background: rgba(201,168,76,0.25); }
+.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.success-msg { display: none; text-align: center; padding: 40px 20px; }
+.success-icon { font-size: 32px; margin-bottom: 16px; }
+.success-title { font-family: 'Cinzel', serif; font-size: 16px; letter-spacing: 0.2em; color: var(--text); margin-bottom: 10px; }
+.success-sub { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+.error-msg { display: none; padding: 10px 14px; background: rgba(252,165,165,0.08); border: 1px solid rgba(252,165,165,0.2); border-radius: 2px; color: #fca5a5; font-size: 12px; margin-top: 8px; }
+
+.form-footer { text-align: center; margin-top: 20px; font-size: 10px; color: var(--dim); letter-spacing: 0.1em; }
+.form-footer a { color: var(--gold); text-decoration: none; }
+
+@media (max-width: 480px) {
+  .form-row { grid-template-columns: 1fr; }
+  .form-card { padding: 24px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="form-wrap">
+  <!-- Header -->
+  <div class="form-header">
+    <div class="form-crest">
+      <svg width="44" height="44" viewBox="0 0 52 52" fill="none">
+        <polygon points="26,2 50,14 50,38 26,50 2,38 2,14" stroke="#d4a843" stroke-width="1.2" fill="none"/>
+        <polygon points="26,8 44,17 44,35 26,44 8,35 8,17" stroke="#d4a843" stroke-width="0.6" fill="none" opacity="0.35"/>
+        <polygon points="26,14 38,21 38,31 26,38 14,31 14,21" stroke="#d4a843" stroke-width="0.4" fill="none" opacity="0.18"/>
+        <text x="26" y="31" text-anchor="middle" font-family="Cinzel,serif" font-size="14" font-weight="500" fill="#d4a843">P</text>
+      </svg>
+    </div>
+    <div class="form-sub">Pinnacle CRM</div>
+    <div class="form-title">New Client Inquiry</div>
+    <div class="form-desc">Complete the form below and a member of our team will be in touch shortly.</div>
+  </div>
+
+  <!-- Form Card -->
+  <div class="form-card">
+    <div id="formContent">
+      <div class="form-section">Contact Information</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First Name *</label>
+          <input class="form-input" type="text" id="first_name" placeholder="First name" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name *</label>
+          <input class="form-input" type="text" id="last_name" placeholder="Last name" required />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Cell Number *</label>
+          <input class="form-input" type="tel" id="cell" placeholder="(407) 000-0000" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address *</label>
+          <input class="form-input" type="email" id="email" placeholder="your@email.com" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Street Address</label>
+        <input class="form-input" type="text" id="street" placeholder="123 Main Street" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input class="form-input" type="text" id="city" placeholder="City" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">State</label>
+          <input class="form-input" type="text" id="state" placeholder="FL" maxlength="2" />
+        </div>
+      </div>
+
+      <div class="form-section">Vehicle of Interest</div>
+      <div class="form-group">
+        <label class="form-label">Vehicle *</label>
+        <select class="form-input" id="vehicle">
+          <option value="" disabled selected>Select a vehicle...</option>
+          <optgroup label="Lamborghini">
+            <option>Lamborghini Huracán</option>
+            <option>Lamborghini Urus</option>
+            <option>Lamborghini Reventón</option>
+          </optgroup>
+          <optgroup label="Bentley">
+            <option>Bentley Bentayga</option>
+            <option>Bentley Continental GT</option>
+            <option>Bentley Flying Spur</option>
+            <option>Bentley Mulliner</option>
+          </optgroup>
+          <optgroup label="Rolls-Royce">
+            <option>Rolls-Royce Ghost</option>
+            <option>Rolls-Royce Cullinan</option>
+            <option>Rolls-Royce Spectre</option>
+            <option>Rolls-Royce Phantom</option>
+            <option>Rolls-Royce Wraith</option>
+          </optgroup>
+          <option value="Other">Other / Not Listed</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Purchase Timeline</label>
+          <select class="form-input" id="timeline">
+            <option value="" disabled selected>Select...</option>
+            <option>Ready to purchase now</option>
+            <option>Within 30 days</option>
+            <option>Within 60 days</option>
+            <option>Within 90 days</option>
+            <option>Just exploring</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">How Did You Hear About Us</label>
+          <select class="form-input" id="source">
+            <option value="" disabled selected>Select...</option>
+            <option>AutoTrader</option>
+            <option>Cars.com</option>
+            <option>Google Search</option>
+            <option>Referral</option>
+            <option>Social Media</option>
+            <option>Walk-In</option>
+            <option>Pinnacle Website</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Additional Notes</label>
+        <textarea class="form-input" id="notes" rows="3" placeholder="Any specific preferences, questions, or details about your inquiry..."></textarea>
+      </div>
+
+      <div class="form-section">Trade-In (Optional)</div>
+      <div class="form-group">
+        <label class="form-label">Trade-In VIN</label>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" type="text" id="trade_vin" placeholder="17-character VIN (optional)" maxlength="17" style="font-family:monospace;letter-spacing:0.05em" />
+          <button type="button" onclick="decodeVin()" style="padding:11px 14px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.35);border-radius:2px;color:#d4a843;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;white-space:nowrap;font-family:'Jost',sans-serif">Decode</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Year</label>
+          <input class="form-input" type="text" id="trade_year" placeholder="e.g. 2022" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Make</label>
+          <input class="form-input" type="text" id="trade_make" placeholder="e.g. Bentley" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Model</label>
+          <input class="form-input" type="text" id="trade_model" placeholder="e.g. Bentayga" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mileage</label>
+          <input class="form-input" type="text" id="trade_mileage" placeholder="e.g. 18,000" />
+        </div>
+      </div>
+
+      <div style="margin-top:8px;font-size:10px;color:var(--dim);line-height:1.6">
+        By submitting this form you agree to be contacted by our team. Reply STOP at any time to opt out of text messages.
+      </div>
+
+      <button class="submit-btn" id="submitBtn" onclick="submitForm()">Submit Inquiry ✦</button>
+      <div class="error-msg" id="errorMsg">Something went wrong — please try again or call us directly.</div>
+    </div>
+
+    <!-- Success -->
+    <div class="success-msg" id="successMsg">
+      <div class="success-icon">✦</div>
+      <div class="success-title">Inquiry Received</div>
+      <div class="success-sub">Thank you for reaching out. A member of our team will be in touch with you shortly.<br /><br />We look forward to earning your business.</div>
+    </div>
+  </div>
+
+  <div class="form-footer">
+    Powered by <a href="https://pinnaclecrm.ai">Pinnacle CRM</a> &nbsp;·&nbsp; <a href="mailto:adam@pinnaclecrm.ai">adam@pinnaclecrm.ai</a>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://ozrybagfwnsaakjamztl.supabase.co";
+const SUPABASE_KEY = "sb_publishable_hkoTQVteawqO4YAbj17F6Q_PmshLH50";
+
+async function decodeVin() {
+  const vin = document.getElementById('trade_vin').value.toUpperCase();
+  if (!vin || vin.length !== 17) { alert('Please enter a valid 17-character VIN'); return; }
+  try {
+    const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`);
+    const data = await res.json();
+    const get = (v) => data.Results?.find(r => r.Variable === v)?.Value || '';
+    document.getElementById('trade_year').value = get('Model Year');
+    document.getElementById('trade_make').value = get('Make');
+    document.getElementById('trade_model').value = get('Model');
+  } catch(e) { alert('Could not decode VIN — please enter manually'); }
+}
+
+async function submitForm() {
+  const btn = document.getElementById('submitBtn');
+  const err = document.getElementById('errorMsg');
+  err.style.display = 'none';
+
+  const first = document.getElementById('first_name').value.trim();
+  const last = document.getElementById('last_name').value.trim();
+  const cell = document.getElementById('cell').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const vehicle = document.getElementById('vehicle').value;
+
+  if (!first || !last || !cell || !email || !vehicle) {
+    err.textContent = 'Please fill in all required fields marked with *';
+    err.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  const payload = {
+    first_name: first,
+    last_name: last,
+    cell: cell,
+    primary_email: email,
+    street: document.getElementById('street').value.trim(),
+    city: document.getElementById('city').value.trim(),
+    state: document.getElementById('state').value.trim().toUpperCase(),
+    vehicle_of_interest: vehicle,
+    lead_source: document.getElementById('source').value || 'Website Form',
+    stage: 'New Lead',
+    notes: document.getElementById('notes').value.trim() + (document.getElementById('timeline').value ? '\nTimeline: ' + document.getElementById('timeline').value : ''),
+    trade_vin: document.getElementById('trade_vin').value.trim(),
+    trade_year: document.getElementById('trade_year').value.trim(),
+    trade_make: document.getElementById('trade_make').value.trim(),
+    trade_model: document.getElementById('trade_model').value.trim(),
+    trade_mileage: document.getElementById('trade_mileage').value.trim(),
+    preferred_language: 'English',
+    do_not_call: false,
+    do_not_text: false,
+    do_not_email: false
+  };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/clients`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok || res.status === 201) {
+      document.getElementById('formContent').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'block';
+    } else {
+      throw new Error('Server error: ' + res.status);
+    }
+  } catch(e) {
+    err.textContent = 'Something went wrong — please try again or call us directly.';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Submit Inquiry ✦';
+  }
+}
+</script>
+</body>
+</html>
