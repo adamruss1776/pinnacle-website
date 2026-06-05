@@ -1,38 +1,41 @@
-const https = require("https");
-
 exports.handler = async function(event) {
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" }, body: "" };
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const ELEVEN_KEY = process.env.ELEVENLABS_API_KEY;
-  const ELEVEN_VOICE = process.env.ELEVENLABS_VOICE_ID;
-  if (!ELEVEN_KEY) return { statusCode: 500, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ error: "Voice API key not configured" }) };
+  const { text, voice } = JSON.parse(event.body || '{}');
+  if (!text || !voice) {
+    return { statusCode: 400, body: 'Missing text or voice' };
+  }
 
-  const { text } = JSON.parse(event.body);
-  const payload = JSON.stringify({ text, model_id: "eleven_monolingual_v1", voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true } });
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    return { statusCode: 500, body: 'ElevenLabs key not configured' };
+  }
 
-  return new Promise((resolve) => {
-    const req = https.request({
-      hostname: "api.elevenlabs.io",
-      path: `/v1/text-to-speech/${ELEVEN_VOICE}`,
-      method: "POST",
-      headers: { "Content-Type": "application/json", "xi-api-key": ELEVEN_KEY, "Content-Length": Buffer.byteLength(payload) }
-    }, (res) => {
-      const chunks = [];
-      res.on("data", chunk => chunks.push(chunk));
-      res.on("end", () => {
-        const buffer = Buffer.concat(chunks);
-        resolve({
-          statusCode: 200,
-          headers: { "Content-Type": "audio/mpeg", "Access-Control-Allow-Origin": "*" },
-          body: buffer.toString("base64"),
-          isBase64Encoded: true
-        });
-      });
-    });
-    req.on("error", (err) => resolve({ statusCode: 500, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ error: err.message }) }));
-    req.write(payload);
-    req.end();
+  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'xi-api-key': apiKey
+    },
+    body: JSON.stringify({
+      text,
+      model_id: 'eleven_monolingual_v1',
+      voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true }
+    })
   });
+
+  if (!response.ok) {
+    return { statusCode: response.status, body: 'ElevenLabs error' };
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': 'audio/mpeg' },
+    body: buffer.toString('base64'),
+    isBase64Encoded: true
+  };
 };
