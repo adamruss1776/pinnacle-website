@@ -843,7 +843,7 @@ body {
   </div>
   <div class="demo-frame reveal" style="aspect-ratio:9/16;max-width:380px;">
     <iframe
-      src="https://www.youtube.com/embed/mRqjZOW9_8E"
+      src="https://www.youtube.com/embed/mRqjZOW9_8E?rel=0&modestbranding=1&controls=0&showinfo=0"
       title="Pinnacle CRM Demo"
       frameborder="0"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -1214,7 +1214,7 @@ async function speak(text) {
   setSpeaking(true);
   try {
     const clean = text.replace(/[✦●★]/g, '').trim();
-    const res = await fetch('/.netlify/functions/speak', {
+    const res = await fetch('/.netlify/functions/jessica-voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: clean, voice: ELEVEN_VOICE })
@@ -1285,7 +1285,7 @@ async function sendMsg() {
   stopSpeaking();
 
   try {
-    const res = await fetch('/.netlify/functions/chat', {
+    const res = await fetch('/.netlify/functions/jessica-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
