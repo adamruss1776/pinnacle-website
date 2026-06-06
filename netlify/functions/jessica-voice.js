@@ -3,10 +3,12 @@ exports.handler = async function(event) {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const { text, voice } = JSON.parse(event.body || '{}');
+  let { text, voice } = JSON.parse(event.body || '{}');
   if (!text || !voice) {
     return { statusCode: 400, body: 'Missing text or voice' };
   }
+  // Fix pronunciations
+  text = text.replace(/\bCRM\b/g, 'C-R-M');
 
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
