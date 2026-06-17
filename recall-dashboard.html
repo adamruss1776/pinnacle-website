@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recall Monitor — Pinnacle CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Jost:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #d4a843;
+      --gold-dim: #a07830;
+      --bg: #0a0908;
+      --surface: #12100e;
+      --surface-2: #1a1614;
+      --border: #2a2520;
+      --text: #e8e0d0;
+      --muted: #a89880;
+      --faint: #4a4540;
+      --recall: #ff6b6b;
+      --recall-bg: #3a1212;
+      --clear: #4caf82;
+      --clear-bg: #0d2e1e;
+      --warn: #e8b84b;
+      --warn-bg: #2e2410;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Jost', sans-serif;
+      font-weight: 400;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(10,9,8,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand {
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      letter-spacing: 3px;
+      color: var(--gold);
+      text-decoration: none;
+    }
+    .nav-badge {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .back-link {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--gold); }
+
+    /* HEADER */
+    .page-header {
+      padding: 48px 40px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .page-header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .page-title-group { flex: 1; min-width: 200px; }
+    .page-eyebrow {
+      font-size: 10px;
+      letter-spacing: 4px;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .page-title {
+      font-family: 'Cinzel', serif;
+      font-size: 28px;
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .page-subtitle {
+      margin-top: 6px;
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 300;
+    }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: 4px;
+      font-family: 'Jost', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--gold);
+      color: #0a0908;
+    }
+    .btn-primary:hover { background: #e0b855; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+    /* STATS BAR */
+    .stats-bar {
+      padding: 24px 40px;
+      border-bottom: 1px solid var(--border);
+    }
+    .stats-bar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .stat-cell {
+      background: var(--surface);
+      padding: 20px 24px;
+    }
+    .stat-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: 'Cinzel', serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1;
+    }
+    .stat-value.recall { color: var(--recall); }
+    .stat-value.clear { color: var(--clear); }
+    .stat-sub {
+      font-size: 11px;
+      color: var(--faint);
+      margin-top: 4px;
+    }
+
+    /* MAIN CONTENT */
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 40px 80px;
+    }
+
+    /* CONTROLS */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .filter-group { display: flex; gap: 4px; }
+    .filter-btn {
+      padding: 6px 14px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-family: 'Jost', sans-serif;
+      letter-spacing: 1px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      transition: all 0.15s;
+    }
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--gold-dim);
+    }
+    .filter-btn.active { color: var(--gold); }
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      max-width: 320px;
+      padding: 8px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: 'Jost', sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input::placeholder { color: var(--faint); }
+    .search-input:focus { border-color: var(--gold-dim); }
+    .controls-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .result-count { font-size: 12px; color: var(--faint); }
+
+    /* MANUAL VIN SECTION */
+    .manual-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .manual-section.visible { display: block; }
+    .manual-section-title {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .manual-input-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .vin-textarea {
+      flex: 1;
+      min-width: 240px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: monospace;
+      font-size: 13px;
+      resize: vertical;
+      min-height: 68px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .vin-textarea::placeholder { color: var(--faint); }
+    .vin-textarea:focus { border-color: var(--gold-dim); }
+
+    /* TABLE */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th:hover { color: var(--text); }
+    thead th .sort-icon { margin-left: 4px; opacity: 0.4; }
+    thead th.sort-asc .sort-icon::after { content: '↑'; opacity: 1; }
+    thead th.sort-desc .sort-icon::after { content: '↓'; opacity: 1; }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      cursor: pointer;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface-2); }
+    tbody tr.hidden { display: none; }
+    td { padding: 14px 16px; font-size: 13px; vertical-align: middle; }
+    .td-vin {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
+    .td-vehicle { font-weight: 500; }
+    .td-stock { color: var(--faint); font-size: 12px; }
+
+    /* STATUS BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge-recall { background: var(--recall-bg); color: var(--recall); }
+    .badge-clear { background: var(--clear-bg); color: var(--clear); }
+    .badge-pending { background: var(--surface-2); color: var(--faint); }
+    .badge-error { background: var(--warn-bg); color: var(--warn); }
+    .badge-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* RECALL COUNT COLUMN */
+    .recall-count { font-variant-numeric: tabular-nums; }
+
+    /* SKELETON ROWS */
+    .skeleton-row td { padding: 16px; }
+    .skeleton-cell {
+      height: 14px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%);
+      background-size: 400% 100%;
+      animation: shimmer 1.4s ease infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 100% 0 } 100% { background-position: -100% 0 } }
+
+    /* EMPTY / ERROR STATE */
+    .empty-state {
+      padding: 64px 24px;
+      text-align: center;
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.4; }
+    .empty-title { font-family: 'Cinzel', serif; font-size: 18px; color: var(--muted); margin-bottom: 8px; }
+    .empty-sub { font-size: 13px; color: var(--faint); }
+
+    /* DETAIL MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 640px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 24px 24px 0;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-vin { font-family: monospace; font-size: 12px; color: var(--gold); letter-spacing: 1px; }
+    .modal-vehicle { font-family: 'Cinzel', serif; font-size: 20px; margin-top: 4px; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--faint);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 20px 24px 24px; }
+    .recall-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .recall-card:last-child { margin-bottom: 0; }
+    .recall-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .recall-campaign { font-size: 11px; font-family: monospace; color: var(--gold); }
+    .recall-date { font-size: 11px; color: var(--faint); }
+    .recall-component {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .recall-field-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-bottom: 3px;
+      margin-top: 10px;
+    }
+    .recall-field-value { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text);
+      z-index: 300;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(.4,0,.2,1);
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* SCAN PROGRESS */
+    .scan-progress {
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .scan-progress.visible { display: block; }
+    .scan-progress-bar {
+      height: 100%;
+      background: var(--gold);
+      width: 0%;
+      border-radius: 1px;
+      transition: width 0.3s ease;
+    }
+
+    .timestamp { font-size: 12px; color: var(--faint); }
+
+    @media (max-width: 768px) {
+      nav, .page-header, .stats-bar { padding-left: 20px; padding-right: 20px; }
+      .content { padding: 24px 20px 60px; }
+      .td-vin, .td-stock { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/">PINNACLE</a>
+  <span class="nav-badge">Recall Monitor</span>
+  <a class="back-link" href="/">← Back to site</a>
+</nav>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="page-title-group">
+      <p class="page-eyebrow">Inventory Intelligence</p>
+      <h1 class="page-title">Recall Monitor</h1>
+      <p class="page-subtitle">Live NHTSA safety recall check across your CDK inventory</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost" id="manualToggle" onclick="toggleManual()">+ Manual VINs</button>
+      <button class="btn btn-primary" id="scanBtn" onclick="runScan()">
+        <span id="scanBtnIcon">▶</span> Scan Now
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stats-bar-inner">
+    <div class="stat-cell">
+      <div class="stat-label">Total Inventory</div>
+      <div class="stat-value" id="statTotal">—</div>
+      <div class="stat-sub" id="statTimestamp">Not yet scanned</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Recall Alerts</div>
+      <div class="stat-value recall" id="statRecalls">—</div>
+      <div class="stat-sub" id="statRecallPct">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Clear</div>
+      <div class="stat-value clear" id="statClear">—</div>
+      <div class="stat-sub">No active recalls</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Scan Source</div>
+      <div class="stat-value" style="font-size:18px" id="statSource">—</div>
+      <div class="stat-sub" id="statSourceSub">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- Manual VIN entry -->
+  <div class="manual-section" id="manualSection">
+    <div class="manual-section-title">Manual VIN Entry</div>
+    <div class="manual-input-row">
+      <textarea class="vin-textarea" id="manualVins" placeholder="Paste VINs here — one per line or comma-separated&#10;e.g. WVGZZZ7LZ8D012345&#10;     1HGCM82633A004352"></textarea>
+      <button class="btn btn-primary" onclick="runManualScan()" style="align-self:flex-start">Check VINs</button>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="scan-progress" id="scanProgress">
+    <div class="scan-progress-bar" id="scanProgressBar"></div>
+  </div>
+
+  <!-- Filter / search controls -->
+  <div class="controls">
+    <div class="filter-group">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">All</button>
+      <button class="filter-btn" data-filter="recall" onclick="setFilter('recall', this)">Recalls</button>
+      <button class="filter-btn" data-filter="clear" onclick="setFilter('clear', this)">Clear</button>
+    </div>
+    <input class="search-input" id="searchInput" type="text" placeholder="Search VIN, make, model…" oninput="applySearch()" />
+    <div class="controls-right">
+      <span class="result-count" id="resultCount"></span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table id="inventoryTable">
+      <thead>
+        <tr>
+          <th onclick="sortTable('vin')">VIN <span class="sort-icon"></span></th>
+          <th onclick="sortTable('vehicle')">Vehicle <span class="sort-icon"></span></th>
+          <th onclick="sortTable('stock')">Stock # <span class="sort-icon"></span></th>
+          <th onclick="sortTable('status')">Recall Status <span class="sort-icon"></span></th>
+          <th onclick="sortTable('count')">Recalls <span class="sort-icon"></span></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <div class="empty-icon">◎</div>
+              <div class="empty-title">No scan yet</div>
+              <div class="empty-sub">Click "Scan Now" to load inventory from CDK and check for recalls</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-vin" id="modalVin"></div>
+        <div class="modal-vehicle" id="modalVehicle"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let scanData = [];
+  let currentFilter = 'all';
+  let currentSort = { col: null, dir: 1 };
+
+  // ---- SCAN ----
+
+  async function runScan() {
+    setScanState(true);
+    try {
+      // 1. Fetch inventory from CDK
+      const invRes = await fetch('/.netlify/functions/cdk-inventory');
+      const invData = await invRes.json();
+
+      if (!invRes.ok || invData.error) {
+        if (invData.configured === false) {
+          showToast('CDK not configured — use Manual VIN entry below', 'warn');
+          toggleManual(true);
+          setScanState(false);
+          return;
+        }
+        throw new Error(invData.error || 'Failed to fetch inventory');
+      }
+
+      const { vehicles } = invData;
+      if (!vehicles || vehicles.length === 0) {
+        showToast('No vehicles found in CDK inventory', 'warn');
+        setScanState(false);
+        return;
+      }
+
+      showToast(`Fetched ${vehicles.length} vehicles — checking recalls…`);
+      updateProgress(20);
+
+      // 2. Check recalls in batches of 10
+      await checkRecallsBatched(vehicles, 'CDK Global');
+
+    } catch (err) {
+      showToast('Scan failed: ' + err.message, 'error');
+    }
+    setScanState(false);
+  }
+
+  async function runManualScan() {
+    const raw = document.getElementById('manualVins').value;
+    const vins = raw.split(/[\n,\s]+/).map(v => v.trim().toUpperCase()).filter(v => v.length >= 10);
+    if (vins.length === 0) { showToast('Enter at least one VIN', 'warn'); return; }
+    setScanState(true);
+    const fakeVehicles = vins.map(vin => ({ vin, make: '', model: '', year: '', stockNumber: '' }));
+    await checkRecallsBatched(fakeVehicles, 'Manual Entry');
+    setScanState(false);
+  }
+
+  async function checkRecallsBatched(vehicles, source) {
+    const BATCH = 10;
+    const results = [];
+    for (let i = 0; i < vehicles.length; i += BATCH) {
+      const batch = vehicles.slice(i, i + BATCH);
+      const vins = batch.map(v => v.vin);
+      const res = await fetch('/.netlify/functions/recall-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vins })
+      });
+      const data = await res.json();
+      // Merge vehicle meta from CDK with recall results
+      data.results.forEach(r => {
+        const meta = vehicles.find(v => v.vin === r.vin) || {};
+        results.push({
+          ...r,
+          make: r.make || meta.make || '',
+          model: r.model || meta.model || '',
+          year: r.year || meta.year || '',
+          stockNumber: meta.stockNumber || '',
+          trim: meta.trim || '',
+          price: meta.price || null
+        });
+      });
+      updateProgress(20 + Math.round(80 * (i + BATCH) / vehicles.length));
+    }
+
+    scanData = results;
+    updateStats(results, source, new Date());
+    renderTable(results);
+    updateProgress(100);
+    setTimeout(() => { document.getElementById('scanProgress').classList.remove('visible'); }, 600);
+    showToast(`Scan complete — ${results.filter(r => r.hasRecall).length} recall${results.filter(r => r.hasRecall).length !== 1 ? 's' : ''} found`);
+  }
+
+  // ---- STATE / PROGRESS ----
+
+  function setScanState(scanning) {
+    const btn = document.getElementById('scanBtn');
+    const icon = document.getElementById('scanBtnIcon');
+    btn.disabled = scanning;
+    icon.textContent = scanning ? '◌' : '▶';
+    if (scanning) {
+      document.getElementById('scanProgress').classList.add('visible');
+      updateProgress(5);
+    }
+  }
+
+  function updateProgress(pct) {
+    document.getElementById('scanProgressBar').style.width = pct + '%';
+  }
+
+  // ---- STATS ----
+
+  function updateStats(results, source, ts) {
+    const recallCount = results.filter(r => r.hasRecall).length;
+    const clearCount = results.filter(r => !r.hasRecall && !r.error).length;
+    document.getElementById('statTotal').textContent = results.length;
+    document.getElementById('statRecalls').textContent = recallCount;
+    document.getElementById('statRecallPct').textContent = results.length
+      ? Math.round(recallCount / results.length * 100) + '% of inventory'
+      : '—';
+    document.getElementById('statClear').textContent = clearCount;
+    document.getElementById('statSource').textContent = source === 'CDK Global' ? 'CDK' : 'Manual';
+    document.getElementById('statSourceSub').textContent = source;
+    document.getElementById('statTimestamp').textContent = 'Scanned ' + ts.toLocaleTimeString();
+  }
+
+  // ---- TABLE ----
+
+  function renderTable(results) {
+    const tbody = document.getElementById('tableBody');
+    if (!results || results.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">No results</div><div class="empty-sub">No vehicles matched your search</div></div></td></tr>`;
+      document.getElementById('resultCount').textContent = '';
+      return;
+    }
+
+    tbody.innerHTML = results.map((r, i) => {
+      const vehicle = [r.year, r.make, r.model].filter(Boolean).join(' ') || 'Unknown Vehicle';
+      let badge, statusVal;
+      if (r.error) {
+        badge = `<span class="badge badge-error">Error</span>`;
+        statusVal = 'error';
+      } else if (r.hasRecall) {
+        badge = `<span class="badge badge-recall"><span class="badge-dot"></span>Recall</span>`;
+        statusVal = 'recall';
+      } else {
+        badge = `<span class="badge badge-clear"><span class="badge-dot"></span>Clear</span>`;
+        statusVal = 'clear';
+      }
+      return `<tr data-index="${i}" data-status="${statusVal}" data-search="${(r.vin + ' ' + vehicle).toLowerCase()}" onclick="openModal(${i})">
+        <td class="td-vin">${r.vin}</td>
+        <td class="td-vehicle">${vehicle}</td>
+        <td class="td-stock">${r.stockNumber || '—'}</td>
+        <td>${badge}</td>
+        <td class="recall-count" style="color:${r.hasRecall ? 'var(--recall)' : 'var(--faint)'}">${r.recalls ? r.recalls.length : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    applyFilter();
+  }
+
+  function applyFilter() {
+    const rows = document.querySelectorAll('#tableBody tr[data-status]');
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    let visible = 0;
+    rows.forEach(row => {
+      const matchFilter = currentFilter === 'all' || row.dataset.status === currentFilter;
+      const matchSearch = !search || row.dataset.search.includes(search);
+      const show = matchFilter && matchSearch;
+      row.classList.toggle('hidden', !show);
+      if (show) visible++;
+    });
+    document.getElementById('resultCount').textContent = visible + ' of ' + rows.length + ' vehicles';
+  }
+
+  function applySearch() { applyFilter(); }
+
+  function setFilter(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilter();
+  }
+
+  function sortTable(col) {
+    if (currentSort.col === col) currentSort.dir *= -1;
+    else { currentSort.col = col; currentSort.dir = 1; }
+
+    const colMap = { vin: 0, vehicle: 1, stock: 2, status: 3, count: 4 };
+    const idx = colMap[col];
+    const tbody = document.getElementById('tableBody');
+    const rows = Array.from(tbody.querySelectorAll('tr[data-index]'));
+    rows.sort((a, b) => {
+      const aVal = a.cells[idx]?.textContent.trim() || '';
+      const bVal = b.cells[idx]?.textContent.trim() || '';
+      const aNum = parseFloat(aVal), bNum = parseFloat(bVal);
+      if (!isNaN(aNum) && !isNaN(bNum)) return (aNum - bNum) * currentSort.dir;
+      return aVal.localeCompare(bVal) * currentSort.dir;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+
+    document.querySelectorAll('thead th').forEach((th, i) => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (i === idx) th.classList.add(currentSort.dir === 1 ? 'sort-asc' : 'sort-desc');
+    });
+  }
+
+  // ---- MODAL ----
+
+  function openModal(i) {
+    const r = scanData[i];
+    if (!r) return;
+    const vehicle = [r.year, r.make, r.model].filter(Boolean).join(' ') || 'Unknown Vehicle';
+    document.getElementById('modalVin').textContent = r.vin;
+    document.getElementById('modalVehicle').textContent = vehicle;
+
+    let body = '';
+    if (r.error) {
+      body = `<div style="color:var(--warn);padding:12px 0">${r.error}</div>`;
+    } else if (!r.hasRecall) {
+      body = `<div style="text-align:center;padding:40px 0">
+        <div style="font-size:32px;color:var(--clear);margin-bottom:12px">✓</div>
+        <div style="color:var(--clear);font-size:15px;font-weight:600">No Active Recalls</div>
+        <div style="color:var(--faint);font-size:12px;margin-top:6px">No NHTSA safety recalls found for this vehicle</div>
+      </div>`;
+    } else {
+      body = r.recalls.map(rc => `
+        <div class="recall-card">
+          <div class="recall-card-header">
+            <span class="recall-campaign">${rc.campaignNumber || 'N/A'}</span>
+            <span class="recall-date">${rc.date ? new Date(rc.date).toLocaleDateString() : ''}</span>
+          </div>
+          <div class="recall-component">${rc.component || 'Component not specified'}</div>
+          ${rc.summary ? `<div class="recall-field-label">Summary</div><div class="recall-field-value">${rc.summary}</div>` : ''}
+          ${rc.consequence ? `<div class="recall-field-label">Consequence</div><div class="recall-field-value">${rc.consequence}</div>` : ''}
+          ${rc.remedy ? `<div class="recall-field-label">Remedy</div><div class="recall-field-value">${rc.remedy}</div>` : ''}
+        </div>`).join('');
+    }
+
+    document.getElementById('modalBody').innerHTML = body;
+    document.getElementById('modalOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal(e) {
+    if (e && e.target !== document.getElementById('modalOverlay')) return;
+    document.getElementById('modalOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  // ---- MANUAL TOGGLE ----
+
+  function toggleManual(forceOpen) {
+    const section = document.getElementById('manualSection');
+    const isVisible = section.classList.contains('visible');
+    if (forceOpen || !isVisible) {
+      section.classList.add('visible');
+      document.getElementById('manualToggle').textContent = '— Manual VINs';
+    } else {
+      section.classList.remove('visible');
+      document.getElementById('manualToggle').textContent = '+ Manual VINs';
+    }
+  }
+
+  // ---- TOAST ----
+
+  let toastTimer;
+  function showToast(msg, type) {
+    const toast = document.getElementById('toast');
+    const colors = { warn: 'var(--warn)', error: 'var(--recall)' };
+    toast.textContent = msg;
+    toast.style.borderColor = colors[type] || 'var(--gold-dim)';
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+</script>
+
+</body>
+</html>
