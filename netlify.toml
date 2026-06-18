@@ -4,6 +4,10 @@
 
 [functions]
   node_bundler = "esbuild"
+  external_node_modules = ["@netlify/blobs"]
 
 [functions."daily-recall-scan"]
   schedule = "0 8 * * *"
+
+[functions."jessica-daily-scan"]
+  schedule = "0 7 * * *"

@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pinnacle CRM</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Jost:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+
+    :root {
+      --bg: #0a0908;
+      --surface: #131110;
+      --card: #1a1714;
+      --border: rgba(201,168,76,0.15);
+      --border-bright: rgba(201,168,76,0.4);
+      --gold: #d4a843;
+      --gold-light: #dfc070;
+      --text: #e8dcc8;
+      --muted: #8a7d6a;
+      --dim: #554f47;
+      --green: #6fcf97;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Jost', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* Nav */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 64px;
+    }
+
+    .nav-brand {
+      font-family: 'Cinzel', serif;
+      font-size: 1.25rem;
+      color: var(--gold);
+      letter-spacing: 0.2em;
+      text-decoration: none;
+    }
+
+    .nav-center {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .bell-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      color: var(--muted);
+    }
+
+    #bell-badge {
+      display: none;
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: #c0392b;
+      color: var(--gold-light);
+      font-size: 0.65rem;
+      font-weight: 700;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Jost', sans-serif;
+    }
+
+    .btn-outline {
+      border: 1px solid var(--gold);
+      background: transparent;
+      color: var(--gold);
+      padding: 0.4rem 1rem;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      text-decoration: none;
+      border-radius: 3px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-outline:hover { background: rgba(212,168,67,0.1); }
+
+    .nav-link {
+      color: var(--muted);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.8rem;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: var(--gold); }
+
+    /* Alert Banner */
+    #alert-banner {
+      display: none;
+      background: var(--gold);
+      color: #0a0908;
+      padding: 0.75rem 2rem;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    #banner-close {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      cursor: pointer;
+      color: #0a0908;
+      line-height: 1;
+      padding: 0 0.25rem;
+    }
+
+    /* Page header */
+    .page-header {
+      padding: 2.5rem 2rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-title {
+      font-family: 'Cinzel', serif;
+      font-size: 2.25rem;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+
+    .page-subtitle {
+      font-family: 'Jost', sans-serif;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      flex: 1;
+      min-width: 120px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+    }
+
+    .stat-value {
+      font-family: 'Cinzel', serif;
+      font-size: 2rem;
+      color: var(--gold);
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+
+    .stat-label {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* Main content */
+    .main-content {
+      display: flex;
+      gap: 1.5rem;
+      padding: 1.5rem 2rem;
+      align-items: flex-start;
+    }
+
+    .col-left {
+      flex: 0 0 60%;
+      min-width: 0;
+    }
+
+    .col-right {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.25rem;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+    }
+
+    #search-input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.9rem;
+      padding: 0.6rem 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #search-input:focus { border-color: var(--gold); }
+    #search-input::placeholder { color: var(--dim); }
+
+    .filter-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      padding: 0.35rem 1rem;
+      border-radius: 20px;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.05em;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead tr {
+      background: var(--surface);
+    }
+
+    th {
+      font-family: 'Cinzel', serif;
+      font-size: 0.7rem;
+      color: var(--gold);
+      text-align: left;
+      padding: 0.75rem 1rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.875rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .table-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-secondary {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 1.25rem;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+      transition: border-color 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--border-bright); }
+
+    .btn-primary {
+      background: var(--gold);
+      color: #0a0908;
+      border: none;
+      padding: 0.5rem 1.25rem;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      transition: background 0.2s;
+      display: inline-block;
+    }
+    .btn-primary:hover { background: var(--gold-light); }
+
+    /* Skeleton shimmer */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skeleton {
+      height: 14px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--card) 25%, var(--surface) 50%, var(--card) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      width: 80%;
+    }
+
+    /* Alerts panel */
+    .alerts-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    #mark-all-read {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0.3rem 0.75rem;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.75rem;
+      cursor: pointer;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    #mark-all-read:hover { border-color: var(--border-bright); color: var(--text); }
+
+    /* CSV Modal */
+    #csv-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-card {
+      background: var(--card);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-family: 'Cinzel', serif;
+      color: var(--gold);
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+    }
+
+    #close-csv-modal {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 0.25rem;
+      transition: color 0.2s;
+    }
+    #close-csv-modal:hover { color: var(--text); }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    #drop-zone {
+      border: 2px dashed var(--border-bright);
+      border-radius: 8px;
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    #drop-zone:hover { border-color: var(--gold); background: rgba(212,168,67,0.03); }
+
+    .drop-icon { color: var(--muted); margin-bottom: 0.75rem; }
+    .drop-text { font-family: 'Jost', sans-serif; color: var(--text); font-size: 1.05rem; margin-bottom: 0.35rem; }
+    .drop-sub { font-family: 'Jost', sans-serif; color: var(--muted); font-size: 0.85rem; }
+
+    .csv-instructions {
+      font-family: 'Jost', sans-serif;
+      color: var(--dim);
+      font-size: 0.8rem;
+      font-style: italic;
+      margin-top: 0.75rem;
+      text-align: center;
+    }
+
+    #csv-preview { display: none; margin-top: 1.25rem; }
+
+    #import-btn {
+      display: none;
+      width: 100%;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: var(--gold);
+      color: #0a0908;
+      border: none;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    #import-btn:hover { background: var(--gold-light); }
+    #import-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    @media (max-width: 900px) {
+      .main-content { flex-direction: column; }
+      .col-left { flex: none; width: 100%; }
+      .col-right { width: 100%; }
+      .nav-center { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      .stats-row { flex-wrap: wrap; }
+      .stat-card { flex: 0 0 calc(50% - 0.5rem); }
+      nav { padding: 0 1rem; }
+      .page-header { padding: 1.5rem 1rem 1rem; }
+      .main-content { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="nav-brand">PINNACLE</a>
+    <span class="nav-center">Client Management</span>
+    <div class="nav-right">
+      <div class="bell-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div id="bell-badge">0</div>
+      </div>
+      <a href="client-profile.html?new=1" class="btn-outline">Add Client</a>
+      <a href="inventory-monitor.html" class="nav-link">Inventory Monitor</a>
+    </div>
+  </nav>
+
+  <div id="alert-banner">
+    <span id="alert-banner-text"></span>
+    <button id="banner-close">&#215;</button>
+  </div>
+
+  <div class="page-header">
+    <h1 class="page-title">CRM Dashboard</h1>
+    <p class="page-subtitle">Manage your luxury automotive clients</p>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">&#8212;</div>
+        <div class="stat-label">Total Clients</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-prospects">&#8212;</div>
+        <div class="stat-label">Active Prospects</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-alerts">&#8212;</div>
+        <div class="stat-label">Unread Alerts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">6</div>
+        <div class="stat-label">Stores Monitored</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <section class="col-left" id="clients-section">
+      <h2 class="section-title">Clients</h2>
+      <input type="text" id="search-input" placeholder="Search clients...">
+      <div class="filter-row">
+        <button class="filter-btn" data-filter="all" style="background:var(--gold);color:#0a0908;border-color:var(--gold);" onclick="filterClients('all')">All</button>
+        <button class="filter-btn" data-filter="prospect" onclick="filterClients('prospect')">Prospects</button>
+        <button class="filter-btn" data-filter="active" onclick="filterClients('active')">Active</button>
+        <button class="filter-btn" data-filter="closed" onclick="filterClients('closed')">Closed</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Vehicle Interest</th>
+              <th>Status</th>
+              <th>Last Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="clients-tbody">
+            <tr><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td></tr>
+            <tr><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td></tr>
+            <tr><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td></tr>
+            <tr><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td></tr>
+            <tr><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td><td><div class="skeleton"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-bottom">
+        <button class="btn-secondary" id="open-csv-modal">Import CSV</button>
+        <a href="client-profile.html?new=1" class="btn-primary">Add Client</a>
+      </div>
+    </section>
+
+    <section class="col-right" id="alerts-section">
+      <div class="alerts-header">
+        <h2 class="section-title" style="margin-bottom:0;">Recent Alerts</h2>
+        <button id="mark-all-read">Mark All Read</button>
+      </div>
+      <div id="alerts-list">
+        <p style="color:var(--muted);padding:1rem;text-align:center;font-family:'Jost',sans-serif;">Loading alerts...</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- CSV Import Modal -->
+  <div id="csv-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">Import eLEADS CSV</span>
+        <button id="close-csv-modal">&#215;</button>
+      </div>
+      <div class="modal-body">
+        <div id="drop-zone">
+          <div class="drop-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          </div>
+          <p class="drop-text">Drop CSV file here</p>
+          <p class="drop-sub">or click to browse</p>
+          <input type="file" id="csv-file-input" accept=".csv" style="display:none;">
+        </div>
+        <p class="csv-instructions">Automatically maps eLEADS export columns</p>
+        <div id="csv-preview"></div>
+        <button id="import-btn">Import</button>
+        <div id="import-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = {
+      clients: '/.netlify/functions/clients',
+      alerts: '/.netlify/functions/alerts',
+      alertsMarkRead: '/.netlify/functions/alerts/mark-read'
+    };
+
+    let allClients = [];
+    let allAlerts = [];
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let csvParsedClients = [];
+
+    function timeAgo(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const seconds = Math.floor((now - date) / 1000);
+      if (seconds < 60) return 'just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return minutes + ' minute' + (minutes !== 1 ? 's' : '') + ' ago';
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return hours + ' hour' + (hours !== 1 ? 's' : '') + ' ago';
+      const days = Math.floor(hours / 24);
+      if (days < 30) return days + ' day' + (days !== 1 ? 's' : '') + ' ago';
+      const months = Math.floor(days / 30);
+      if (months < 12) return months + ' month' + (months !== 1 ? 's' : '') + ' ago';
+      const years = Math.floor(months / 12);
+      return years + ' year' + (years !== 1 ? 's' : '') + ' ago';
+    }
+
+    async function loadClients() {
+      showTableLoading();
+      try {
+        const res = await fetch(API.clients);
+        if (!res.ok) throw new Error('Failed to fetch clients');
+        const data = await res.json();
+        allClients = Array.isArray(data) ? data : (data.clients || []);
+        renderClients();
+        updateClientStats();
+      } catch (e) {
+        showTableError(e.message);
+      }
+    }
+
+    async function loadAlerts() {
+      try {
+        const res = await fetch(API.alerts);
+        if (!res.ok) throw new Error('Failed to fetch alerts');
+        const data = await res.json();
+        allAlerts = Array.isArray(data) ? data : (data.alerts || []);
+        renderAlerts();
+        updateAlertStats();
+      } catch (e) {
+        document.getElementById('alerts-list').innerHTML = '<p style="color:var(--muted);padding:1rem;">Failed to load alerts.</p>';
+      }
+    }
+
+    function updateClientStats() {
+      const total = allClients.length;
+      const prospects = allClients.filter(function(c) { return c.status === 'prospect' || c.status === 'active'; }).length;
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-prospects').textContent = prospects;
+    }
+
+    function updateAlertStats() {
+      const unread = allAlerts.filter(function(a) { return !a.read; }).length;
+      document.getElementById('stat-alerts').textContent = unread;
+      const badge = document.getElementById('bell-badge');
+      if (unread > 0) {
+        badge.textContent = unread;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+      const banner = document.getElementById('alert-banner');
+      const bannerText = document.getElementById('alert-banner-text');
+      if (unread > 0) {
+        bannerText.textContent = unread + ' unread alert' + (unread !== 1 ? 's' : '') + ' — click to view';
+        banner.style.display = 'flex';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
+    function renderClients() {
+      const tbody = document.getElementById('clients-tbody');
+      let filtered = allClients;
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(function(c) { return c.status === currentFilter; });
+      }
+      if (currentSearch) {
+        const q = currentSearch.toLowerCase();
+        filtered = filtered.filter(function(c) {
+          const name = ((c.firstName || '') + ' ' + (c.lastName || '')).toLowerCase();
+          return name.includes(q) || (c.email || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q);
+        });
+      }
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No clients found</td></tr>';
+        return;
+      }
+      tbody.innerHTML = filtered.map(function(client) {
+        const name = (client.firstName || '') + ' ' + (client.lastName || '');
+        const vi = client.vehicleInterest || {};
+        const vehicle = [vi.yearMin, vi.makes && vi.makes[0], vi.models && vi.models[0]].filter(Boolean).join(' ') || '—';
+        const statusBadge = getStatusBadge(client.status);
+        const updated = client.updatedAt ? timeAgo(client.updatedAt) : '—';
+        const clientId = client._id || client.id;
+        return '<tr>' +
+          '<td><a href="client-profile.html?id=' + clientId + '" style="color:var(--gold);text-decoration:none;">' + escapeHtml(name.trim() || 'Unknown') + '</a></td>' +
+          '<td>' + escapeHtml(client.phone || '—') + '</td>' +
+          '<td>' + escapeHtml(client.email || '—') + '</td>' +
+          '<td>' + escapeHtml(vehicle) + '</td>' +
+          '<td>' + statusBadge + '</td>' +
+          '<td>' + updated + '</td>' +
+          '<td style="display:flex;align-items:center;gap:0.5rem;">' +
+            '<a href="client-profile.html?id=' + clientId + '" title="Edit" style="color:var(--gold);display:inline-flex;align-items:center;">' +
+              '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+            '</a>' +
+            '<button onclick="deleteClient(\'' + clientId + '\')" title="Delete" style="background:none;border:none;cursor:pointer;color:#e05555;display:inline-flex;align-items:center;padding:0;">' +
+              '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>' +
+            '</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function getStatusBadge(status) {
+      const s = (status || 'prospect').toLowerCase();
+      if (s === 'active') return '<span style="background:rgba(111,207,151,0.15);color:var(--green);border:1px solid rgba(111,207,151,0.3);border-radius:20px;padding:2px 10px;font-size:0.75rem;font-weight:600;letter-spacing:0.05em;">Active</span>';
+      if (s === 'closed') return '<span style="background:rgba(85,79,71,0.3);color:var(--dim);border:1px solid rgba(85,79,71,0.4);border-radius:20px;padding:2px 10px;font-size:0.75rem;font-weight:600;letter-spacing:0.05em;">Closed</span>';
+      return '<span style="background:rgba(212,168,67,0.15);color:var(--gold);border:1px solid rgba(212,168,67,0.3);border-radius:20px;padding:2px 10px;font-size:0.75rem;font-weight:600;letter-spacing:0.05em;">Prospect</span>';
+    }
+
+    function showTableLoading() {
+      const tbody = document.getElementById('clients-tbody');
+      tbody.innerHTML = Array(5).fill(0).map(function() {
+        return '<tr>' + Array(7).fill(0).map(function() { return '<td><div class="skeleton"></div></td>'; }).join('') + '</tr>';
+      }).join('');
+    }
+
+    function showTableError(msg) {
+      const tbody = document.getElementById('clients-tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#e05555;padding:2rem;">Error: ' + escapeHtml(msg) + '</td></tr>';
+    }
+
+    function filterClients(status) {
+      currentFilter = status;
+      document.querySelectorAll('.filter-btn').forEach(function(btn) {
+        const isActive = btn.dataset.filter === status;
+        btn.style.background = isActive ? 'var(--gold)' : 'transparent';
+        btn.style.color = isActive ? '#0a0908' : 'var(--muted)';
+        btn.style.borderColor = isActive ? 'var(--gold)' : 'rgba(201,168,76,0.15)';
+      });
+      renderClients();
+    }
+
+    function searchClients(query) {
+      currentSearch = query;
+      renderClients();
+    }
+
+    async function deleteClient(id) {
+      if (!confirm('Are you sure you want to delete this client? This cannot be undone.')) return;
+      try {
+        const res = await fetch(API.clients + '?id=' + encodeURIComponent(id), { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+        await loadClients();
+      } catch (e) {
+        alert('Failed to delete client: ' + e.message);
+      }
+    }
+
+    function renderAlerts() {
+      const list = document.getElementById('alerts-list');
+      if (allAlerts.length === 0) {
+        list.innerHTML = '<p style="color:var(--muted);padding:1rem;text-align:center;font-family:\'Jost\',sans-serif;">No alerts yet.</p>';
+        return;
+      }
+      list.innerHTML = allAlerts.map(function(alert) {
+        const isUnread = !alert.read;
+        const vi = alert.vehicleInfo || alert.vehicle || {};
+        const vehicleStr = [vi.year, vi.make, vi.model].filter(Boolean).join(' ') || 'Vehicle';
+        const store = alert.storeName || alert.store || '';
+        const clientName = alert.clientName || '';
+        const carIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l3-4h8l3 4h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg>';
+        const personIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+        const icon = alert.type === 'client_match' ? personIcon : carIcon;
+        const borderStr = isUnread ? 'border:1px solid var(--border-bright);border-left:4px solid var(--gold);' : 'border:1px solid var(--border);';
+        return '<div style="position:relative;background:var(--card);' + borderStr + 'border-radius:6px;padding:0.875rem 1rem;margin-bottom:0.75rem;display:flex;gap:0.75rem;align-items:flex-start;">' +
+          (isUnread ? '<div style="position:absolute;top:0.6rem;right:0.75rem;width:8px;height:8px;border-radius:50%;background:var(--gold);"></div>' : '') +
+          '<div style="color:var(--gold);flex-shrink:0;margin-top:2px;">' + icon + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-family:\'Jost\',sans-serif;font-weight:600;color:var(--text);margin-bottom:0.25rem;">' + escapeHtml(vehicleStr) + '</div>' +
+            (store ? '<span style="font-size:0.7rem;border:1px solid var(--border-bright);color:var(--gold);border-radius:20px;padding:1px 8px;font-family:\'Jost\',sans-serif;letter-spacing:0.05em;display:inline-block;">' + escapeHtml(store) + '</span>' : '') +
+            (clientName ? '<div style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem;font-family:\'Jost\',sans-serif;">' + escapeHtml(clientName) + '</div>' : '') +
+            '<div style="font-size:0.75rem;color:var(--dim);margin-top:0.35rem;font-family:\'Jost\',sans-serif;">' + timeAgo(alert.createdAt || alert.timestamp || new Date().toISOString()) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    async function markAllRead() {
+      try {
+        await fetch(API.alertsMarkRead, { method: 'PUT' });
+        await loadAlerts();
+      } catch (e) {
+        alert('Failed to mark alerts as read: ' + e.message);
+      }
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let field = '';
+      let inQuote = false;
+      let i = 0;
+      while (i < text.length) {
+        const ch = text[i];
+        if (inQuote) {
+          if (ch === '"') {
+            if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+            inQuote = false; i++; continue;
+          }
+          field += ch; i++; continue;
+        }
+        if (ch === '"') { inQuote = true; i++; continue; }
+        if (ch === ',') { row.push(field); field = ''; i++; continue; }
+        if (ch === '\r') {
+          row.push(field); field = '';
+          rows.push(row); row = [];
+          if (text[i + 1] === '\n') i++;
+          i++; continue;
+        }
+        if (ch === '\n') {
+          row.push(field); field = '';
+          rows.push(row); row = [];
+          i++; continue;
+        }
+        field += ch; i++;
+      }
+      if (field || row.length > 0) { row.push(field); rows.push(row); }
+      if (rows.length > 0 && rows[rows.length - 1].every(function(f) { return f === ''; })) rows.pop();
+      return rows;
+    }
+
+    function mapEleadsRow(headers, row) {
+      function get() {
+        const names = Array.prototype.slice.call(arguments);
+        for (let n = 0; n < names.length; n++) {
+          const idx = headers.findIndex(function(h) { return h.trim().toLowerCase() === names[n].toLowerCase(); });
+          if (idx !== -1) return (row[idx] || '').trim();
+        }
+        return '';
+      }
+      const firstName = get('Customer First Name', 'First Name', 'Contact First Name');
+      const lastName = get('Customer Last Name', 'Last Name', 'Contact Last Name');
+      const phone = get('Cell Phone', 'Mobile', 'Phone');
+      const email = get('Email Address', 'Email');
+      const address = get('Street Address', 'Address');
+      const city = get('City');
+      const state = get('State');
+      const zip = get('Zip', 'Postal Code');
+      const yearRaw = get('Vehicle Year of Interest', 'Year', 'Vehicle Year');
+      const make = get('Vehicle Make of Interest', 'Make');
+      const model = get('Vehicle Model of Interest', 'Model');
+      const conditionRaw = get('New/Used', 'Condition').toLowerCase();
+      let condition = 'either';
+      if (conditionRaw.includes('new')) condition = 'new';
+      else if (conditionRaw.includes('used') || conditionRaw.includes('pre')) condition = 'used';
+      const statusRaw = get('Status').toLowerCase();
+      let status = 'prospect';
+      if (statusRaw === 'active') status = 'active';
+      else if (statusRaw === 'closed') status = 'closed';
+      const source = get('Lead Source', 'Source');
+      const salesperson = get('Salesperson');
+      const notes = get('Notes', 'Comments');
+      const vehicleInterest = {};
+      if (yearRaw) { vehicleInterest.yearMin = parseInt(yearRaw); vehicleInterest.yearMax = vehicleInterest.yearMin + 2; }
+      if (make) vehicleInterest.makes = [make];
+      if (model) vehicleInterest.models = [model];
+      if (condition) vehicleInterest.condition = condition;
+      return { firstName, lastName, phone, email, address, city, state, zip, vehicleInterest, status, source, salesperson, notes };
+    }
+
+    function showCSVPreview(clients) {
+      const preview = document.getElementById('csv-preview');
+      const importBtn = document.getElementById('import-btn');
+      preview.style.display = 'block';
+      importBtn.style.display = 'block';
+      importBtn.textContent = 'Import ' + clients.length + ' Client' + (clients.length !== 1 ? 's' : '');
+      const shown = clients.slice(0, 5);
+      const rows = shown.map(function(c) {
+        const vi = c.vehicleInterest || {};
+        const vehicle = [vi.yearMin, vi.makes && vi.makes[0], vi.models && vi.models[0]].filter(Boolean).join(' ') || '—';
+        return '<tr style="border-bottom:1px solid var(--border);">' +
+          '<td style="padding:0.5rem;color:var(--text);">' + escapeHtml((c.firstName + ' ' + c.lastName).trim() || '—') + '</td>' +
+          '<td style="padding:0.5rem;color:var(--muted);">' + escapeHtml(c.phone || '—') + '</td>' +
+          '<td style="padding:0.5rem;color:var(--muted);">' + escapeHtml(c.email || '—') + '</td>' +
+          '<td style="padding:0.5rem;color:var(--muted);">' + escapeHtml(vehicle) + '</td>' +
+          '<td style="padding:0.5rem;">' + getStatusBadge(c.status) + '</td>' +
+        '</tr>';
+      }).join('');
+      preview.innerHTML =
+        '<div style="font-family:\'Cinzel\',serif;color:var(--gold);font-size:0.85rem;letter-spacing:0.1em;margin-bottom:0.5rem;">PREVIEW</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-family:\'Jost\',sans-serif;font-size:0.8rem;margin-top:0.5rem;">' +
+          '<thead><tr style="background:var(--surface);">' +
+            '<th style="padding:0.5rem;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">Name</th>' +
+            '<th style="padding:0.5rem;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">Phone</th>' +
+            '<th style="padding:0.5rem;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">Email</th>' +
+            '<th style="padding:0.5rem;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">Vehicle</th>' +
+            '<th style="padding:0.5rem;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">Status</th>' +
+          '</tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table>';
+    }
+
+    async function importClients(clients) {
+      const btn = document.getElementById('import-btn');
+      const result = document.getElementById('import-result');
+      btn.disabled = true;
+      btn.textContent = 'Importing...';
+      result.innerHTML = '';
+      try {
+        const res = await fetch(API.clients, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clients: clients })
+        });
+        if (!res.ok) throw new Error('Server error ' + res.status);
+        result.innerHTML = '<div style="color:var(--green);font-family:\'Jost\',sans-serif;margin-top:0.75rem;">Successfully imported ' + clients.length + ' client' + (clients.length !== 1 ? 's' : '') + '.</div>';
+        btn.style.display = 'none';
+        await loadClients();
+      } catch (e) {
+        result.innerHTML = '<div style="color:#e05555;font-family:\'Jost\',sans-serif;margin-top:0.75rem;">Import failed: ' + escapeHtml(e.message) + '</div>';
+        btn.disabled = false;
+        btn.textContent = 'Retry Import';
+      }
+    }
+
+    function handleCSVFile(file) {
+      if (!file || !file.name.endsWith('.csv')) { alert('Please select a CSV file.'); return; }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        const rows = parseCSV(text);
+        if (rows.length < 2) { alert('CSV file appears empty or has only headers.'); return; }
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
+        csvParsedClients = dataRows.map(function(row) { return mapEleadsRow(headers, row); }).filter(function(c) { return c.firstName || c.lastName || c.email; });
+        if (csvParsedClients.length === 0) { alert('No valid client records found. Check that column headers match eLEADS format.'); return; }
+        showCSVPreview(csvParsedClients);
+      };
+      reader.readAsText(file);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadClients();
+      loadAlerts();
+
+      document.getElementById('search-input').addEventListener('input', function(e) {
+        searchClients(e.target.value);
+      });
+
+      document.getElementById('alert-banner').addEventListener('click', function(e) {
+        if (e.target.id === 'banner-close') {
+          document.getElementById('alert-banner').style.display = 'none';
+          return;
+        }
+        document.getElementById('alerts-section').scrollIntoView({ behavior: 'smooth' });
+      });
+
+      document.getElementById('open-csv-modal').addEventListener('click', function() {
+        document.getElementById('csv-modal').style.display = 'flex';
+      });
+
+      document.getElementById('close-csv-modal').addEventListener('click', function() {
+        document.getElementById('csv-modal').style.display = 'none';
+        resetCSVModal();
+      });
+
+      document.getElementById('csv-modal').addEventListener('click', function(e) {
+        if (e.target === document.getElementById('csv-modal')) {
+          document.getElementById('csv-modal').style.display = 'none';
+          resetCSVModal();
+        }
+      });
+
+      function resetCSVModal() {
+        document.getElementById('csv-preview').style.display = 'none';
+        document.getElementById('import-btn').style.display = 'none';
+        document.getElementById('import-result').innerHTML = '';
+        document.getElementById('csv-file-input').value = '';
+        csvParsedClients = [];
+      }
+
+      document.getElementById('csv-file-input').addEventListener('change', function(e) {
+        if (e.target.files[0]) handleCSVFile(e.target.files[0]);
+      });
+
+      document.getElementById('drop-zone').addEventListener('click', function() {
+        document.getElementById('csv-file-input').click();
+      });
+
+      const dropZone = document.getElementById('drop-zone');
+      dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--gold)';
+        dropZone.style.background = 'rgba(212,168,67,0.05)';
+      });
+      dropZone.addEventListener('dragleave', function() {
+        dropZone.style.borderColor = 'var(--border-bright)';
+        dropZone.style.background = 'transparent';
+      });
+      dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border-bright)';
+        dropZone.style.background = 'transparent';
+        const file = e.dataTransfer.files[0];
+        if (file) handleCSVFile(file);
+      });
+
+      document.getElementById('import-btn').addEventListener('click', function() {
+        if (csvParsedClients.length > 0) importClients(csvParsedClients);
+      });
+
+      document.getElementById('mark-all-read').addEventListener('click', markAllRead);
+    });
+  </script>
+</body>
+</html>
