@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Jost:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -593,13 +594,13 @@
   <div class="csv-section" id="csvSection">
     <div class="csv-section-title">Import Inventory CSV</div>
     <p class="csv-section-sub">
-      Export your inventory from eLEADS / CDK (any CSV with a VIN column). Pinnacle will check every vehicle for NHTSA recalls and save the inventory so Jessica's daily scan includes it.
+      Export your inventory from eLEADS / CDK as Excel or CSV and drop it here. Pinnacle will check every vehicle for NHTSA recalls and save the inventory so Jessica's daily scan includes it.
     </p>
     <div class="drop-zone" id="csvDropZone" onclick="document.getElementById('csvFileInput').click()">
-      <input type="file" id="csvFileInput" accept=".csv,.txt,.tsv" style="display:none" onchange="handleCsvFile(this.files[0])">
+      <input type="file" id="csvFileInput" accept=".csv,.txt,.tsv,.xlsx,.xls" style="display:none" onchange="handleCsvFile(this.files[0])">
       <div class="drop-zone-icon">📋</div>
-      <div class="drop-zone-title">Drop your inventory CSV here</div>
-      <div class="drop-zone-sub">or click to browse — any CSV with a VIN column works</div>
+      <div class="drop-zone-title">Drop your inventory file here</div>
+      <div class="drop-zone-sub">or click to browse — Excel (.xlsx) or CSV, VIN column required</div>
     </div>
     <div class="csv-loaded-row" id="csvLoadedRow">
       <span style="color:var(--clear);font-size:18px;flex-shrink:0">✓</span>
@@ -965,11 +966,27 @@
 
   function handleCsvFile(file) {
     if (!file) return;
+    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
     const reader = new FileReader();
+
     reader.onload = (e) => {
-      const vehicles = parseInventoryCsv(e.target.result);
+      let vehicles = [];
+      if (isExcel) {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const csv = XLSX.utils.sheet_to_csv(ws);
+          vehicles = parseInventoryCsv(csv);
+        } catch (err) {
+          showToast('Could not read Excel file: ' + err.message, 'error');
+          return;
+        }
+      } else {
+        vehicles = parseInventoryCsv(e.target.result);
+      }
+
       if (vehicles.length === 0) {
-        showToast('No vehicles found — ensure CSV has a VIN column with 17-character values', 'error');
+        showToast('No vehicles found — ensure the file has a VIN column with 17-character values', 'error');
         return;
       }
       csvVehicles = vehicles;
@@ -978,7 +995,8 @@
       document.getElementById('csvLoadedRow').classList.add('visible');
       showToast(vehicles.length + ' vehicles loaded — click "Check Recalls"');
     };
-    reader.readAsText(file);
+
+    isExcel ? reader.readAsArrayBuffer(file) : reader.readAsText(file);
   }
 
   function parseInventoryCsv(text) {
