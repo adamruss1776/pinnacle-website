@@ -73,10 +73,12 @@ exports.handler = async (event) => {
   const inventoryStore = getStore('pinnacle-inventory');
   const matches = [];
 
+  const allStoreIds = [...STORES.map(s => s.id), 'own-store'];
+
   await Promise.all(
-    STORES.map(async (store) => {
+    allStoreIds.map(async (storeId) => {
       try {
-        const raw = await inventoryStore.get(`${store.id}/latest`);
+        const raw = await inventoryStore.get(`${storeId}/latest`);
         if (!raw) return;
         const { vehicles } = JSON.parse(raw);
         if (!Array.isArray(vehicles)) return;

@@ -441,6 +441,56 @@
     }
     .recall-field-value { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
+    /* CSV UPLOAD */
+    .csv-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .csv-section.visible { display: block; }
+    .csv-section-title {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .csv-section-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 5px;
+      padding: 30px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--gold-dim);
+      background: rgba(212,168,67,0.04);
+    }
+    .drop-zone-icon { font-size: 26px; margin-bottom: 8px; color: var(--faint); }
+    .drop-zone-title { font-size: 14px; color: var(--muted); margin-bottom: 3px; }
+    .drop-zone-sub { font-size: 12px; color: var(--faint); }
+    .csv-loaded-row {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(76,175,130,0.08);
+      border: 1px solid rgba(76,175,130,0.25);
+      border-radius: 5px;
+      margin-top: 12px;
+    }
+    .csv-loaded-row.visible { display: flex; }
+
     /* TOAST */
     .toast {
       position: fixed;
@@ -500,12 +550,13 @@
     <div class="page-title-group">
       <p class="page-eyebrow">Inventory Intelligence</p>
       <h1 class="page-title">Recall Monitor</h1>
-      <p class="page-subtitle">Live NHTSA safety recall check across your CDK inventory</p>
+      <p class="page-subtitle">Live NHTSA safety recall check — upload your inventory CSV or enter VINs manually</p>
     </div>
     <div class="header-actions">
+      <button class="btn btn-ghost" id="csvToggle" onclick="toggleCsvUpload()">↑ Upload CSV</button>
       <button class="btn btn-ghost" id="manualToggle" onclick="toggleManual()">+ Manual VINs</button>
       <button class="btn btn-primary" id="scanBtn" onclick="runScan()">
-        <span id="scanBtnIcon">▶</span> Scan Now
+        <span id="scanBtnIcon">▶</span> Scan Saved
       </button>
     </div>
   </div>
@@ -537,6 +588,28 @@
 </div>
 
 <div class="content">
+
+  <!-- CSV Upload -->
+  <div class="csv-section" id="csvSection">
+    <div class="csv-section-title">Import Inventory CSV</div>
+    <p class="csv-section-sub">
+      Export your inventory from eLEADS / CDK (any CSV with a VIN column). Pinnacle will check every vehicle for NHTSA recalls and save the inventory so Jessica's daily scan includes it.
+    </p>
+    <div class="drop-zone" id="csvDropZone" onclick="document.getElementById('csvFileInput').click()">
+      <input type="file" id="csvFileInput" accept=".csv,.txt,.tsv" style="display:none" onchange="handleCsvFile(this.files[0])">
+      <div class="drop-zone-icon">📋</div>
+      <div class="drop-zone-title">Drop your inventory CSV here</div>
+      <div class="drop-zone-sub">or click to browse — any CSV with a VIN column works</div>
+    </div>
+    <div class="csv-loaded-row" id="csvLoadedRow">
+      <span style="color:var(--clear);font-size:18px;flex-shrink:0">✓</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="csvFileName"></div>
+        <div style="font-size:12px;color:var(--faint)" id="csvVehicleCount"></div>
+      </div>
+      <button class="btn btn-primary" id="csvCheckBtn" onclick="runCsvScan()" style="padding:8px 18px;font-size:12px;flex-shrink:0">Check Recalls</button>
+    </div>
+  </div>
 
   <!-- Manual VIN entry -->
   <div class="manual-section" id="manualSection">
@@ -583,7 +656,7 @@
             <div class="empty-state">
               <div class="empty-icon">◎</div>
               <div class="empty-title">No scan yet</div>
-              <div class="empty-sub">Click "Scan Now" to load inventory from CDK and check for recalls</div>
+              <div class="empty-sub">Upload a CSV from eLEADS/CDK or enter VINs manually to check for recalls</div>
             </div>
           </td>
         </tr>
@@ -620,35 +693,27 @@
   async function runScan() {
     setScanState(true);
     try {
-      // 1. Fetch inventory from CDK
+      // Try CDK first; if not configured, fall through to saved CSV
       const invRes = await fetch('/.netlify/functions/cdk-inventory');
       const invData = await invRes.json();
 
-      if (!invRes.ok || invData.error) {
-        if (invData.configured === false) {
-          showToast('CDK not configured — use Manual VIN entry below', 'warn');
-          toggleManual(true);
-          setScanState(false);
-          return;
-        }
-        throw new Error(invData.error || 'Failed to fetch inventory');
-      }
-
-      const { vehicles } = invData;
-      if (!vehicles || vehicles.length === 0) {
-        showToast('No vehicles found in CDK inventory', 'warn');
+      if (invRes.ok && !invData.error && invData.vehicles && invData.vehicles.length > 0) {
+        showToast('Fetched ' + invData.vehicles.length + ' vehicles from CDK — checking recalls…');
+        updateProgress(20);
+        await checkRecallsBatched(invData.vehicles, 'CDK Global');
         setScanState(false);
         return;
       }
+    } catch {}
 
-      showToast(`Fetched ${vehicles.length} vehicles — checking recalls…`);
-      updateProgress(20);
-
-      // 2. Check recalls in batches of 10
-      await checkRecallsBatched(vehicles, 'CDK Global');
-
-    } catch (err) {
-      showToast('Scan failed: ' + err.message, 'error');
+    // Fall back: re-check the last uploaded CSV vehicles stored in blobs
+    if (csvVehicles.length > 0) {
+      showToast('Using last uploaded CSV — ' + csvVehicles.length + ' vehicles…');
+      updateProgress(10);
+      await checkRecallsBatched(csvVehicles, 'CSV Import');
+    } else {
+      showToast('No inventory loaded — upload a CSV or enter VINs manually', 'warn');
+      toggleCsvUpload(true);
     }
     setScanState(false);
   }
@@ -870,6 +935,137 @@
       section.classList.remove('visible');
       document.getElementById('manualToggle').textContent = '+ Manual VINs';
     }
+  }
+
+  // ---- CSV UPLOAD ----
+
+  let csvVehicles = [];
+
+  function toggleCsvUpload(forceOpen) {
+    const section = document.getElementById('csvSection');
+    const isVisible = section.classList.contains('visible');
+    if (forceOpen || !isVisible) {
+      section.classList.add('visible');
+      document.getElementById('csvToggle').textContent = '— Close CSV';
+    } else {
+      section.classList.remove('visible');
+      document.getElementById('csvToggle').textContent = '↑ Upload CSV';
+    }
+  }
+
+  const dropZone = document.getElementById('csvDropZone');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleCsvFile(file);
+  });
+
+  function handleCsvFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const vehicles = parseInventoryCsv(e.target.result);
+      if (vehicles.length === 0) {
+        showToast('No vehicles found — ensure CSV has a VIN column with 17-character values', 'error');
+        return;
+      }
+      csvVehicles = vehicles;
+      document.getElementById('csvFileName').textContent = file.name;
+      document.getElementById('csvVehicleCount').textContent = vehicles.length + ' vehicles ready';
+      document.getElementById('csvLoadedRow').classList.add('visible');
+      showToast(vehicles.length + ' vehicles loaded — click "Check Recalls"');
+    };
+    reader.readAsText(file);
+  }
+
+  function parseInventoryCsv(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+
+    const firstLine = lines[0];
+    const delim = firstLine.split('\t').length > firstLine.split(',').length ? '\t' : ',';
+
+    function splitLine(line) {
+      const cells = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQ = !inQ; }
+        else if (c === delim && !inQ) { cells.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      cells.push(cur.trim());
+      return cells;
+    }
+
+    const norm = h => h.toLowerCase().trim().replace(/[^a-z0-9 /]/g, '').trim();
+    const headers = splitLine(lines[0]).map(norm);
+
+    const findCol = (...aliases) => {
+      for (let i = 0; i < headers.length; i++) {
+        if (aliases.includes(headers[i])) return i;
+      }
+      return -1;
+    };
+
+    const cols = {
+      vin:   findCol('vin', 'vehicle identification number', 'vehicleidentificationnumber', 'vehicle id', 'vin number'),
+      year:  findCol('year', 'model year', 'modelyear', 'yr', 'my'),
+      make:  findCol('make', 'manufacturer', 'mfr'),
+      model: findCol('model', 'model name', 'modelname'),
+      trim:  findCol('trim', 'trim level', 'trimlevel', 'series'),
+      miles: findCol('mileage', 'miles', 'odometer', 'odometer reading', 'odometerreading'),
+      price: findCol('price', 'internet price', 'internetprice', 'sale price', 'msrp', 'list price', 'selling price', 'retail price'),
+      stock: findCol('stock', 'stock number', 'stocknumber', 'stock #', 'stk', 'stk #'),
+      cond:  findCol('type', 'condition', 'new/used', 'newused', 'vehicle type', 'status'),
+    };
+
+    if (cols.vin === -1) return [];
+
+    const vehicles = [];
+    for (let r = 1; r < lines.length; r++) {
+      const cells = splitLine(lines[r]);
+      const vin = (cells[cols.vin] || '').trim().toUpperCase();
+      if (!vin || vin.length !== 17) continue;
+      const get = (c) => c >= 0 ? (cells[c] || '').trim() : '';
+      const condRaw = get(cols.cond).toLowerCase();
+      vehicles.push({
+        vin,
+        year: get(cols.year),
+        make: get(cols.make),
+        model: get(cols.model),
+        trim: get(cols.trim),
+        mileage: parseFloat(get(cols.miles)) || null,
+        price: parseFloat(get(cols.price).replace(/[$,]/g, '')) || null,
+        stockNumber: get(cols.stock),
+        condition: condRaw.includes('used') || condRaw.includes('pre') ? 'used' : 'new',
+        storeId: 'own-store',
+        storeName: 'My Dealership',
+      });
+    }
+    return vehicles;
+  }
+
+  async function runCsvScan() {
+    if (csvVehicles.length === 0) return;
+    setScanState(true);
+
+    // Save to Netlify Blobs so Jessica's scan includes it
+    try {
+      await fetch('/.netlify/functions/inventory-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicles: csvVehicles }),
+      });
+    } catch {}
+
+    showToast('Checking ' + csvVehicles.length + ' vehicles for recalls…');
+    updateProgress(10);
+    await checkRecallsBatched(csvVehicles, 'CSV Import');
+    setScanState(false);
   }
 
   // ---- TOAST ----

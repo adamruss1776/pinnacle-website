@@ -1,33 +1,72 @@
 // Netlify Scheduled Function — runs daily at 8 AM UTC
-// Fetches CDK inventory, checks NHTSA recalls, emails alerts via SendGrid
-// Required env vars: CDK_CLIENT_ID, CDK_CLIENT_SECRET, SENDGRID_API_KEY, RECALL_ALERT_EMAIL
-// Optional env vars: CDK_TOKEN_URL, CDK_INVENTORY_URL, CDK_SUBSCRIPTION_ID, RECALL_FROM_EMAIL
+// Checks inventory for NHTSA recalls and emails alerts.
+// Inventory source priority: (1) CDK credentials, (2) own-store CSV upload in blobs.
+// Email: set RESEND_API_KEY (resend.com) or SENDGRID_API_KEY.
+// Required: RECALL_ALERT_EMAIL
+const { getStore } = require('@netlify/blobs');
+
 exports.handler = async () => {
   const {
     CDK_CLIENT_ID, CDK_CLIENT_SECRET, CDK_TOKEN_URL, CDK_INVENTORY_URL, CDK_SUBSCRIPTION_ID,
-    SENDGRID_API_KEY, RECALL_ALERT_EMAIL, RECALL_FROM_EMAIL
+    RESEND_API_KEY, SENDGRID_API_KEY, RECALL_ALERT_EMAIL,
   } = process.env;
 
-  if (!CDK_CLIENT_ID || !CDK_CLIENT_SECRET) {
-    console.error('Daily recall scan: CDK credentials not configured');
+  if (!RECALL_ALERT_EMAIL) {
+    console.error('Daily recall scan: RECALL_ALERT_EMAIL not set');
     return { statusCode: 503 };
   }
-  if (!SENDGRID_API_KEY || !RECALL_ALERT_EMAIL) {
-    console.error('Daily recall scan: email not configured');
+  if (!RESEND_API_KEY && !SENDGRID_API_KEY) {
+    console.error('Daily recall scan: no email provider configured (set RESEND_API_KEY or SENDGRID_API_KEY)');
     return { statusCode: 503 };
+  }
+
+  let vehicles = [];
+  let source = 'unknown';
+
+  if (CDK_CLIENT_ID && CDK_CLIENT_SECRET) {
+    try {
+      const token = await getCDKToken(CDK_TOKEN_URL, CDK_CLIENT_ID, CDK_CLIENT_SECRET);
+      vehicles = await getCDKInventory(CDK_INVENTORY_URL, token, CDK_SUBSCRIPTION_ID);
+      source = 'CDK';
+      console.log(`Daily recall scan: fetched ${vehicles.length} vehicles from CDK`);
+    } catch (err) {
+      console.error('CDK fetch failed, falling back to own-store:', err.message);
+    }
+  }
+
+  if (vehicles.length === 0) {
+    try {
+      const blobStore = getStore('pinnacle-inventory');
+      const raw = await blobStore.get('own-store/latest');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        vehicles = (parsed.vehicles || []).map(v => ({
+          vin: v.vin,
+          make: v.make || '',
+          model: v.model || '',
+          year: String(v.year || ''),
+          stockNumber: v.stockNumber || '',
+        })).filter(v => v.vin);
+        source = 'CSV Upload';
+        console.log(`Daily recall scan: using ${vehicles.length} vehicles from own-store CSV`);
+      }
+    } catch (err) {
+      console.error('Own-store fetch failed:', err.message);
+    }
+  }
+
+  if (vehicles.length === 0) {
+    console.log('Daily recall scan: no inventory available — upload a CSV or configure CDK');
+    return { statusCode: 200 };
   }
 
   try {
-    const token = await getCDKToken(CDK_TOKEN_URL, CDK_CLIENT_ID, CDK_CLIENT_SECRET);
-    const vehicles = await getCDKInventory(CDK_INVENTORY_URL, token, CDK_SUBSCRIPTION_ID);
-    console.log(`Daily recall scan: fetched ${vehicles.length} vehicles from CDK`);
-
     const results = await Promise.all(vehicles.map(checkVin));
     const withRecalls = results.filter(r => r.hasRecall);
-    console.log(`Daily recall scan: ${withRecalls.length} vehicles with active recalls`);
+    console.log(`Daily recall scan: ${withRecalls.length} vehicles with recalls (source: ${source})`);
 
     if (withRecalls.length > 0) {
-      await sendRecallAlert(withRecalls, SENDGRID_API_KEY, RECALL_ALERT_EMAIL, RECALL_FROM_EMAIL);
+      await sendRecallAlert(withRecalls, RECALL_ALERT_EMAIL);
       console.log(`Daily recall scan: alert sent to ${RECALL_ALERT_EMAIL}`);
     }
 
@@ -109,16 +148,30 @@ async function fetchRecalls(make, model, year) {
 
 // ---- Email ----
 
-async function sendRecallAlert(vehicles, apiKey, toEmail, fromEmail) {
+async function sendRecallAlert(vehicles, toEmail) {
+  const { RESEND_API_KEY, SENDGRID_API_KEY } = process.env;
+  const subject = `⚠️ Recall Alert — ${vehicles.length} vehicle${vehicles.length > 1 ? 's' : ''} in your inventory`;
+  const html = buildEmailHtml(vehicles);
+
+  if (RESEND_API_KEY) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'Pinnacle CRM <onboarding@resend.dev>', to: [toEmail], subject, html }),
+    });
+    if (!res.ok) throw new Error(`Resend failed: ${res.status}`);
+    return;
+  }
+
   const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       personalizations: [{ to: [{ email: toEmail }] }],
-      from: { email: fromEmail || 'alerts@pinnacle-crm.com', name: 'Pinnacle CRM' },
-      subject: `⚠️ Recall Alert — ${vehicles.length} vehicle${vehicles.length > 1 ? 's' : ''} in your inventory`,
-      content: [{ type: 'text/html', value: buildEmailHtml(vehicles) }]
-    })
+      from: { email: 'alerts@pinnacle-crm.com', name: 'Pinnacle CRM' },
+      subject,
+      content: [{ type: 'text/html', value: html }],
+    }),
   });
   if (!res.ok) throw new Error(`SendGrid failed: ${res.status}`);
 }

@@ -14,6 +14,7 @@ const STORES = [
   { id: 'rrmc-seattle', name: 'Rolls-Royce Motor Cars Seattle', url: 'https://www.rolls-roycemotorcarsseattle.com', make: 'Rolls-Royce', inventoryPaths: ['/inventory/', '/new/', '/new-vehicles/', '/pre-owned/'] },
   { id: 'bentley-dg', name: 'Bentley Downers Grove', url: 'https://www.bentleydownersgrove.com', make: 'Bentley', inventoryPaths: ['/inventory/', '/new-vehicles/', '/new/', '/vehicles/'] },
   { id: 'bentley-gc', name: 'Bentley Gold Coast', url: 'https://www.bentleygoldcoast.com', make: 'Bentley', inventoryPaths: ['/inventory/', '/new-vehicles/', '/new/', '/vehicles/'] },
+  { id: 'fields-auto', name: 'Fields Auto Group', url: 'https://www.fieldsauto.com', make: '', inventoryPaths: ['/inventory/', '/new-inventory/', '/new-vehicles/', '/used-inventory/', '/search/', '/vehicles/'] },
 ];
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
