@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pinnacle — Inventory Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0908;
+      --surface: #131110;
+      --card: #1a1714;
+      --border: rgba(201,168,76,0.15);
+      --border-bright: rgba(201,168,76,0.4);
+      --gold: #d4a843;
+      --gold-light: #dfc070;
+      --text: #e8dcc8;
+      --muted: #8a7d6a;
+      --dim: #554f47;
+      --green: #6fcf97;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Jost', sans-serif;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,9,8,0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 32px;
+      height: 60px;
+    }
+
+    .nav-brand {
+      font-family: 'Cinzel', serif;
+      color: var(--gold);
+      letter-spacing: 0.3em;
+      font-size: 1.1rem;
+      font-weight: 500;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .nav-center {
+      font-family: 'Jost', sans-serif;
+      color: var(--muted);
+      font-size: 0.8rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-primary {
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      background: transparent;
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: rgba(212,168,67,0.1);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .nav-crm-link {
+      color: var(--muted);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: color 0.2s;
+    }
+
+    .nav-crm-link:hover {
+      color: var(--text);
+    }
+
+    /* STATS BAR */
+    .stats-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 16px 32px;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-family: 'Jost', sans-serif;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      color: var(--gold);
+      font-family: 'Cinzel', serif;
+      font-size: 1.1rem;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 32px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* NEW TODAY SECTION */
+    #new-today-section {
+      display: none;
+      border-left: 3px solid var(--gold);
+      background: rgba(212,168,67,0.05);
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .new-today-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .new-today-title {
+      font-family: 'Cinzel', serif;
+      color: var(--gold);
+      font-size: 0.85rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .count-badge {
+      background: var(--gold);
+      color: var(--bg);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    #new-today-cards {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    #new-today-cards::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    #new-today-cards::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #new-today-cards::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .new-today-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      min-width: 200px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.2s;
+    }
+
+    .new-today-card:hover {
+      border-color: var(--border-bright);
+    }
+
+    .vehicle-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .vehicle-price {
+      color: var(--gold);
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .vehicle-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .view-link {
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 0.8rem;
+      margin-top: 8px;
+      display: inline-block;
+      transition: opacity 0.2s;
+    }
+
+    .view-link:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
+    /* CONTROLS ROW */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      padding: 16px 32px;
+      gap: 16px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    #store-filters {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-tab {
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: transparent;
+      padding: 6px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 400;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .filter-tab:hover {
+      border-color: var(--border-bright);
+      color: var(--text);
+    }
+
+    .filter-tab.active {
+      border-color: var(--border-bright);
+      color: var(--gold-light);
+      background: rgba(201,168,76,0.08);
+    }
+
+    .controls-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a7d6a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .controls-select:focus {
+      outline: none;
+      border-color: var(--border-bright);
+    }
+
+    .controls-select option {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .search-input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      width: 280px;
+      transition: border-color 0.2s;
+    }
+
+    .search-input::placeholder {
+      color: var(--dim);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--border-bright);
+    }
+
+    .results-count {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-family: 'Jost', sans-serif;
+      white-space: nowrap;
+    }
+
+    /* MAIN CONTENT */
+    .main-content {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px 32px;
+    }
+
+    /* TABLE */
+    .table-wrapper {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .table-wrapper::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    th {
+      font-family: 'Jost', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.7rem;
+      color: var(--muted);
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      font-weight: 500;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    th[data-sort] {
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    th[data-sort]:hover {
+      color: var(--text);
+    }
+
+    .sort-indicator {
+      color: var(--dim);
+      font-size: 0.75rem;
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover td {
+      background: rgba(201,168,76,0.03);
+    }
+
+    /* BADGES */
+    .store-badge {
+      display: inline-block;
+      border: 1px solid var(--border-bright);
+      color: var(--gold);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Jost', sans-serif;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .store-badge-sm {
+      display: inline-block;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: 'Jost', sans-serif;
+      text-transform: uppercase;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .condition-badge.new {
+      color: var(--gold);
+      font-weight: 500;
+    }
+
+    .condition-badge.used {
+      color: var(--muted);
+    }
+
+    .action-link {
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: opacity 0.2s;
+    }
+
+    .action-link:hover {
+      text-decoration: underline;
+    }
+
+    /* SKELETON */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--card) 25%, var(--surface) 50%, var(--card) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+      height: 14px;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .nav-center {
+        display: none;
+      }
+
+      nav {
+        padding: 0 16px;
+      }
+
+      .stats-bar {
+        padding: 12px 16px;
+        gap: 16px;
+      }
+
+      .stat-divider {
+        display: none;
+      }
+
+      .controls-row {
+        padding: 12px 16px;
+      }
+
+      .search-input {
+        width: 100%;
+      }
+
+      .results-count {
+        margin-left: 0;
+        width: 100%;
+      }
+
+      .main-content {
+        padding: 16px;
+      }
+
+      #new-today-section {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="crm.html" class="nav-brand">PINNACLE</a>
+    <span class="nav-center">Inventory Monitor</span>
+    <div class="nav-right">
+      <button class="btn-primary" id="scan-btn">Scan Now</button>
+      <a href="crm.html" class="nav-crm-link">CRM</a>
+    </div>
+  </nav>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-label">Stores</span>
+      <span class="stat-value">6</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-label">Vehicles</span>
+      <span class="stat-value" id="stat-vehicles">—</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-label">New Today</span>
+      <span class="stat-value" id="stat-new-today">—</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-label">Last Scanned</span>
+      <span class="stat-value" id="last-scanned" style="font-size:0.9rem">—</span>
+    </div>
+  </div>
+
+  <!-- NEW TODAY SECTION -->
+  <div id="new-today-section">
+    <div class="new-today-header">
+      <span class="new-today-title">New Today</span>
+      <span class="count-badge" id="new-today-count">0</span>
+    </div>
+    <div id="new-today-cards"></div>
+  </div>
+
+  <!-- CONTROLS ROW -->
+  <div class="controls-row">
+    <div id="store-filters">
+      <button class="filter-tab active" data-store="All">All</button>
+    </div>
+    <select class="controls-select" id="condition-filter">
+      <option value="All">All Conditions</option>
+      <option value="New">New</option>
+      <option value="Pre-Owned">Pre-Owned</option>
+    </select>
+    <input
+      type="text"
+      class="search-input"
+      id="search-input"
+      placeholder="Search make, model, VIN..."
+    >
+    <span class="results-count" id="results-count"></span>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="storeName">Store<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="year">Year<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="make">Make<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="model">Model<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="trim">Trim<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="condition">Condition<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="price">Price<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="mileage">Mileage<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="exteriorColor">Color<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="stockNumber">Stock #<span class="sort-indicator"> ⇅</span></th>
+            <th data-sort="vin">VIN<span class="sort-indicator"> ⇅</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="inventory-tbody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let allVehicles = [];
+    let filteredVehicles = [];
+    let currentStore = 'All';
+    let currentCondition = 'All';
+    let currentSearch = '';
+    let sortCol = null;
+    let sortDir = 'asc';
+
+    const YESTERDAY_KEY = 'pinnacle_vins_yesterday';
+    const TODAY_KEY = 'pinnacle_vins_today';
+
+    function getYesterdayVins() {
+      try {
+        return new Set(JSON.parse(localStorage.getItem(YESTERDAY_KEY) || '[]'));
+      } catch {
+        return new Set();
+      }
+    }
+
+    function saveTodayVins(vehicles) {
+      const today = new Date().toDateString();
+      const lastDate = localStorage.getItem('pinnacle_last_date');
+      if (lastDate !== today) {
+        localStorage.setItem(YESTERDAY_KEY, localStorage.getItem(TODAY_KEY) || '[]');
+        localStorage.setItem('pinnacle_last_date', today);
+      }
+      localStorage.setItem(TODAY_KEY, JSON.stringify(vehicles.map(v => v.vin).filter(Boolean)));
+    }
+
+    function isNewToday(vehicle) {
+      const yesterdayVins = getYesterdayVins();
+      return vehicle.vin && !yesterdayVins.has(vehicle.vin);
+    }
+
+    async function loadInventory() {
+      showTableLoading();
+      const scanBtn = document.getElementById('scan-btn');
+      scanBtn.disabled = true;
+      scanBtn.textContent = 'Scanning...';
+      try {
+        const res = await fetch('/.netlify/functions/inventory-scraper');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        allVehicles = Array.isArray(data) ? data : (data.vehicles || []);
+        saveTodayVins(allVehicles);
+        updateStats(allVehicles);
+        buildStoreFilters(allVehicles);
+        showNewToday(allVehicles);
+        applyFilters();
+        document.getElementById('last-scanned').textContent = new Date().toLocaleTimeString();
+      } catch(e) {
+        showTableError(e.message);
+        document.getElementById('stat-vehicles').textContent = '—';
+        document.getElementById('stat-new-today').textContent = '—';
+        document.getElementById('last-scanned').textContent = 'Error';
+      } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = 'Scan Now';
+      }
+    }
+
+    function updateStats(vehicles) {
+      document.getElementById('stat-vehicles').textContent = vehicles.length.toLocaleString();
+      const newToday = vehicles.filter(isNewToday).length;
+      document.getElementById('stat-new-today').textContent = newToday.toLocaleString();
+    }
+
+    function buildStoreFilters(vehicles) {
+      const stores = [...new Set(vehicles.map(v => v.storeName || v.storeId).filter(Boolean))];
+      const container = document.getElementById('store-filters');
+      const existing = container.querySelectorAll('[data-store]:not([data-store="All"])');
+      existing.forEach(b => b.remove());
+      stores.forEach(store => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-tab';
+        btn.dataset.store = store;
+        btn.textContent = store;
+        btn.addEventListener('click', () => setStoreFilter(store));
+        container.appendChild(btn);
+      });
+    }
+
+    function setStoreFilter(store) {
+      currentStore = store;
+      document.querySelectorAll('.filter-tab').forEach(b => {
+        const isActive = (store === 'All' && b.dataset.store === 'All') || (b.dataset.store === store);
+        b.classList.toggle('active', isActive);
+      });
+      applyFilters();
+    }
+
+    function showNewToday(vehicles) {
+      const newVehicles = vehicles.filter(isNewToday);
+      const section = document.getElementById('new-today-section');
+      if (newVehicles.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      section.style.display = 'block';
+      document.getElementById('new-today-count').textContent = newVehicles.length;
+      const container = document.getElementById('new-today-cards');
+      container.innerHTML = newVehicles.map(v => `
+        <div class="new-today-card">
+          <div class="store-badge">${escapeHtml(v.storeName || v.storeId || 'Unknown')}</div>
+          <div class="vehicle-title">${escapeHtml((v.year || '') + ' ' + (v.make || '') + ' ' + (v.model || ''))}</div>
+          <div class="vehicle-price">${formatPrice(v.price)}</div>
+          <div class="vehicle-meta">
+            <span class="condition-badge ${v.condition === 'New' ? 'new' : 'used'}">${escapeHtml(v.condition || 'N/A')}</span>
+            ${v.exteriorColor ? `<span>${escapeHtml(v.exteriorColor)}</span>` : ''}
+          </div>
+          ${v.detailUrl ? `<a href="${escapeHtml(v.detailUrl)}" target="_blank" rel="noopener noreferrer" class="view-link">View →</a>` : ''}
+        </div>
+      `).join('');
+    }
+
+    function applyFilters() {
+      let vehicles = [...allVehicles];
+      if (currentStore !== 'All') {
+        vehicles = vehicles.filter(v => (v.storeName || v.storeId) === currentStore);
+      }
+      if (currentCondition !== 'All') {
+        vehicles = vehicles.filter(v => v.condition === currentCondition);
+      }
+      if (currentSearch) {
+        const q = currentSearch.toLowerCase();
+        vehicles = vehicles.filter(v =>
+          (v.make || '').toLowerCase().includes(q) ||
+          (v.model || '').toLowerCase().includes(q) ||
+          (v.vin || '').toLowerCase().includes(q) ||
+          (v.stockNumber || '').toLowerCase().includes(q) ||
+          (v.trim || '').toLowerCase().includes(q)
+        );
+      }
+      if (sortCol) {
+        vehicles = sortVehicles(vehicles, sortCol, sortDir);
+      }
+      filteredVehicles = vehicles;
+      document.getElementById('results-count').textContent = `${vehicles.length.toLocaleString()} vehicle${vehicles.length !== 1 ? 's' : ''}`;
+      renderTable(vehicles);
+    }
+
+    function sortVehicles(vehicles, col, dir) {
+      return [...vehicles].sort((a, b) => {
+        let va = a[col], vb = b[col];
+        if (col === 'price' || col === 'mileage' || col === 'year') {
+          va = parseFloat(va) || 0;
+          vb = parseFloat(vb) || 0;
+        } else {
+          va = String(va || '').toLowerCase();
+          vb = String(vb || '').toLowerCase();
+        }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    function renderTable(vehicles) {
+      const tbody = document.getElementById('inventory-tbody');
+      if (vehicles.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="12" style="text-align:center;padding:64px 16px;color:var(--muted)">
+              <div style="font-size:1.5rem;margin-bottom:12px;opacity:0.4">◯</div>
+              <div style="font-size:0.9rem;letter-spacing:0.05em">No vehicles found</div>
+            </td>
+          </tr>`;
+        return;
+      }
+      tbody.innerHTML = vehicles.map(v => `
+        <tr>
+          <td><span class="store-badge-sm">${escapeHtml(v.storeName || v.storeId || '—')}</span></td>
+          <td>${escapeHtml(String(v.year || '—'))}</td>
+          <td>${escapeHtml(v.make || '—')}</td>
+          <td>${escapeHtml(v.model || '—')}</td>
+          <td style="color:var(--muted);font-size:0.8rem">${escapeHtml(v.trim || '—')}</td>
+          <td><span class="condition-badge ${v.condition === 'New' ? 'new' : 'used'}">${escapeHtml(v.condition || '—')}</span></td>
+          <td style="color:var(--gold)">${formatPrice(v.price)}</td>
+          <td>${v.mileage ? Number(v.mileage).toLocaleString() + ' mi' : '—'}</td>
+          <td style="color:var(--muted)">${escapeHtml(v.exteriorColor || '—')}</td>
+          <td style="font-family:monospace;font-size:0.8rem">${escapeHtml(v.stockNumber || '—')}</td>
+          <td style="font-family:monospace;font-size:0.8rem;color:var(--dim)" title="${escapeHtml(v.vin || '')}">${v.vin ? '...' + escapeHtml(v.vin.slice(-8)) : '—'}</td>
+          <td>${v.detailUrl ? `<a href="${escapeHtml(v.detailUrl)}" target="_blank" rel="noopener noreferrer" class="action-link">View →</a>` : '—'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function showTableLoading() {
+      const tbody = document.getElementById('inventory-tbody');
+      const skeletonRow = `<tr>${Array(12).fill('<td><div class="skeleton"></div></td>').join('')}</tr>`;
+      tbody.innerHTML = Array(5).fill(skeletonRow).join('');
+    }
+
+    function showTableError(msg) {
+      const tbody = document.getElementById('inventory-tbody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="12" style="text-align:center;padding:64px 16px;color:#ef4444">
+            <div style="font-size:1.5rem;margin-bottom:12px;opacity:0.5">⚠</div>
+            <div style="font-size:0.9rem">Failed to load inventory: ${escapeHtml(msg)}</div>
+          </td>
+        </tr>`;
+    }
+
+    function formatPrice(price) {
+      if (price === null || price === undefined || price === '') return '—';
+      const num = Number(price);
+      if (isNaN(num)) return '—';
+      return '$' + num.toLocaleString();
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Sort click handlers
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.sort;
+        if (sortCol === col) {
+          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortCol = col;
+          sortDir = 'asc';
+        }
+        document.querySelectorAll('th[data-sort]').forEach(h => {
+          h.querySelector('.sort-indicator').textContent = ' ⇅';
+        });
+        th.querySelector('.sort-indicator').textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
+        applyFilters();
+      });
+    });
+
+    document.getElementById('scan-btn').addEventListener('click', loadInventory);
+
+    document.getElementById('condition-filter').addEventListener('change', e => {
+      currentCondition = e.target.value;
+      applyFilters();
+    });
+
+    document.getElementById('search-input').addEventListener('input', e => {
+      currentSearch = e.target.value;
+      applyFilters();
+    });
+
+    document.querySelector('[data-store="All"]').addEventListener('click', () => setStoreFilter('All'));
+
+    loadInventory();
+  </script>
+</body>
+</html>

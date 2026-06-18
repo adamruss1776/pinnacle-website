@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pinnacle – Client Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0908;
+      --surface: #131110;
+      --card: #1a1714;
+      --border: rgba(201,168,76,0.15);
+      --border-bright: rgba(201,168,76,0.4);
+      --gold: #d4a843;
+      --gold-light: #dfc070;
+      --text: #e8dcc8;
+      --muted: #8a7d6a;
+      --dim: #554f47;
+      --green: #6fcf97;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Jost', sans-serif;
+      font-weight: 400;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ─── NAV ─────────────────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,9,8,0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      height: 60px;
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      gap: 16px;
+    }
+
+    .nav-left {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-center {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .nav-back {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.875rem;
+      color: var(--muted);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s;
+    }
+    .nav-back:hover { color: var(--text); }
+
+    .nav-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      color: var(--gold-light);
+      text-align: center;
+    }
+
+    /* ─── BUTTONS ─────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+      text-transform: uppercase;
+    }
+
+    .btn-primary {
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      background: transparent;
+    }
+    .btn-primary:hover { background: rgba(212,168,67,0.1); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-danger {
+      border: 1px solid rgba(239,68,68,0.4);
+      color: #ef4444;
+      background: transparent;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.08); }
+
+    .btn-full {
+      width: 100%;
+      justify-content: center;
+      padding: 12px 24px;
+      font-size: 0.9rem;
+    }
+
+    /* ─── LAYOUT ──────────────────────────────────────────────────────── */
+    .main-wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 32px 64px;
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; padding: 16px; }
+      .nav { padding: 0 16px; }
+    }
+
+    .left-col { display: flex; flex-direction: column; gap: 24px; }
+    .right-col { display: flex; flex-direction: column; gap: 24px; }
+
+    /* ─── CARDS ───────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .card-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: var(--gold-light);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    /* ─── FORM ELEMENTS ───────────────────────────────────────────────── */
+    .form-group { display: flex; flex-direction: column; margin-bottom: 16px; }
+    .form-group:last-child { margin-bottom: 0; }
+
+    .form-label {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.9rem;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .form-input::placeholder { color: var(--dim); }
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus { border-color: var(--border-bright); }
+
+    .form-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a7d6a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.5;
+    }
+
+    .form-row {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .form-row-2 { grid-template-columns: 1fr 1fr; }
+    .form-row-3 { grid-template-columns: 2fr 1fr 1.5fr; }
+
+    @media (max-width: 600px) {
+      .form-row-2 { grid-template-columns: 1fr; }
+      .form-row-3 { grid-template-columns: 1fr; }
+    }
+
+    /* ─── RADIO PILLS ─────────────────────────────────────────────────── */
+    .pill-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .condition-pill {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--muted);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .condition-pill:hover { border-color: var(--border-bright); color: var(--text); }
+    .condition-pill.active {
+      background: rgba(212,168,67,0.15);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* ─── MATCH COUNT BADGE ───────────────────────────────────────────── */
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .match-badge {
+      background: rgba(212,168,67,0.15);
+      border: 1px solid var(--border-bright);
+      color: var(--gold);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* ─── SPINNER ─────────────────────────────────────────────────────── */
+    .spinner-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 32px 0;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── EMPTY STATES ────────────────────────────────────────────────── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .empty-state svg { opacity: 0.35; }
+
+    .empty-state-title {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.9rem;
+      color: var(--dim);
+    }
+
+    .empty-state-sub {
+      font-size: 0.8rem;
+      color: var(--dim);
+      max-width: 220px;
+      line-height: 1.5;
+    }
+
+    /* ─── MATCH CARDS ─────────────────────────────────────────────────── */
+    .match-list { display: flex; flex-direction: column; }
+
+    .match-item {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .match-item:last-child { border-bottom: none; }
+    .match-item:first-child { padding-top: 0; }
+
+    .match-store-badge {
+      display: inline-block;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border: 1px solid var(--border-bright);
+      border-radius: 4px;
+      padding: 2px 7px;
+      margin-bottom: 6px;
+    }
+
+    .match-ymm {
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      color: var(--gold-light);
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .match-price {
+      font-family: 'Jost', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+
+    .match-details {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .condition-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .condition-badge.new-badge {
+      background: rgba(212,168,67,0.15);
+      color: var(--gold);
+      border: 1px solid rgba(212,168,67,0.3);
+    }
+    .condition-badge.used-badge {
+      background: rgba(138,125,106,0.15);
+      color: var(--muted);
+      border: 1px solid rgba(138,125,106,0.3);
+    }
+
+    .match-link {
+      font-size: 0.82rem;
+      color: var(--gold);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.2s;
+    }
+    .match-link:hover { color: var(--gold-light); }
+
+    /* ─── ALERTS ──────────────────────────────────────────────────────── */
+    .alert-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .alert-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      border-left: 3px solid var(--gold);
+      background: rgba(212,168,67,0.04);
+      border-radius: 0 6px 6px 0;
+    }
+
+    .alert-icon { color: var(--gold); flex-shrink: 0; margin-top: 2px; }
+
+    .alert-body { flex: 1; min-width: 0; }
+
+    .alert-vehicle {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.875rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .alert-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .alert-store {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border: 1px solid var(--border-bright);
+      border-radius: 3px;
+      padding: 1px 5px;
+    }
+
+    .alert-time {
+      font-size: 0.75rem;
+      color: var(--dim);
+    }
+
+    /* ─── INCLUDE LATEST CHECKBOX ─────────────────────────────────────── */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+
+    .checkbox-label {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.8rem;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    /* ─── TOAST ───────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 9999;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.25s, transform 0.25s;
+      max-width: 300px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success {
+      background: rgba(111,207,151,0.15);
+      border: 1px solid rgba(111,207,151,0.4);
+      color: var(--green);
+    }
+    #toast.error {
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #ef4444;
+    }
+
+    /* ─── SECTION DIVIDER ─────────────────────────────────────────────── */
+    .field-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    /* ─── SMALL UTIL ──────────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+    .text-muted { color: var(--muted); }
+    .text-dim { color: var(--dim); font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+
+  <!-- ─── NAV ───────────────────────────────────────────────────────────── -->
+  <nav class="nav">
+    <div class="nav-left">
+      <a href="crm.html" class="nav-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Clients
+      </a>
+    </div>
+    <div class="nav-center">
+      <span class="nav-title" id="nav-client-name">New Client</span>
+    </div>
+    <div class="nav-right">
+      <button class="btn btn-primary" id="save-btn">Save</button>
+      <button class="btn btn-danger" id="delete-btn">Delete</button>
+    </div>
+  </nav>
+
+  <!-- ─── MAIN GRID ──────────────────────────────────────────────────────── -->
+  <div class="main-wrap">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+      <div class="card">
+        <div class="card-title">Contact Information</div>
+
+        <div class="form-row form-row-2">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="first-name">First Name</label>
+            <input class="form-input" type="text" id="first-name" placeholder="First name" autocomplete="given-name" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="last-name">Last Name</label>
+            <input class="form-input" type="text" id="last-name" placeholder="Last name" autocomplete="family-name" />
+          </div>
+        </div>
+
+        <div style="margin-top:16px"></div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input class="form-input" type="email" id="email" placeholder="client@example.com" autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="phone">Phone</label>
+          <input class="form-input" type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="tel" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="address">Address</label>
+          <input class="form-input" type="text" id="address" placeholder="Street address" autocomplete="street-address" />
+        </div>
+
+        <div class="form-row form-row-3">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="city">City</label>
+            <input class="form-input" type="text" id="city" placeholder="City" autocomplete="address-level2" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="state">State</label>
+            <input class="form-input" type="text" id="state" placeholder="CA" maxlength="2" autocomplete="address-level1" style="text-transform:uppercase" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="zip">ZIP</label>
+            <input class="form-input" type="text" id="zip" placeholder="90210" maxlength="10" autocomplete="postal-code" />
+          </div>
+        </div>
+
+        <div style="margin-top:16px"></div>
+
+        <div class="form-row form-row-2">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="status">Status</label>
+            <select class="form-select" id="status">
+              <option value="prospect">Prospect</option>
+              <option value="active">Active</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="lead-source">Lead Source</label>
+            <select class="form-select" id="lead-source">
+              <option value="elead">eLEADS Import</option>
+              <option value="manual">Manual Entry</option>
+              <option value="referral">Referral</option>
+              <option value="walk-in">Walk-In</option>
+              <option value="phone">Phone Call</option>
+              <option value="internet">Internet Lead</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:16px"></div>
+
+        <div class="form-group">
+          <label class="form-label" for="salesperson">Salesperson</label>
+          <input class="form-input" type="text" id="salesperson" placeholder="Assigned salesperson" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="notes">Notes</label>
+          <textarea class="form-textarea" id="notes" rows="4" placeholder="Client notes, preferences, history…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right-col">
+
+      <!-- CARD 1: Vehicle of Interest — eLEADS 3-column grid layout -->
+      <div class="card">
+        <div class="card-title">Vehicle of Interest</div>
+
+        <!-- eLEADS-style 3-column grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+          <!-- Row 1: VIN | (empty) | Mileage -->
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="vi-vin">VIN:</label>
+            <input class="form-input" type="text" id="vi-vin" placeholder="" maxlength="17" style="font-family:monospace;font-size:12px;letter-spacing:0.5px" />
+          </div>
+          <div></div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="vi-mileage">Mileage:</label>
+            <input class="form-input" type="text" id="vi-mileage" placeholder="" />
+          </div>
+
+          <!-- Row 2: * Class | New/Used | Stock -->
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="vi-class">* Class:</label>
+            <select class="form-select" id="vi-class">
+              <option value="Auto Truck">Auto Truck</option>
+              <option value="Auto">Auto</option>
+              <option value="SUV">SUV</option>
+              <option value="Convertible">Convertible</option>
+              <option value="Coupe">Coupe</option>
+              <option value="Sedan">Sedan</option>
+              <option value="Wagon">Wagon</option>
+              <option value="Van">Van</option>
+              <option value="Motorcycle">Motorcycle</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="vi-condition">New/Used:</label>
+            <select class="form-select" id="vi-condition">
+              <option value="new">New</option>
+              <option value="used">Used</option>
+              <option value="either">Either</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="vi-stock">Stock:</label>
+            <input class="form-input" type="text" id="vi-stock" placeholder="" />
+          </div>
+
+          <!-- Row 3: Year (From) | To | Make -->
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="year-from">Year:</label>
+            <select class="form-select" id="year-from"><option value="">-Select-</option></select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="year-to">To:</label>
+            <select class="form-select" id="year-to"><option value="">-Select-</option></select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="make-select">Make:</label>
+            <select class="form-select" id="make-select">
+              <option value="">-Select-</option>
+              <option value="Lamborghini">Lamborghini</option>
+              <option value="Bentley">Bentley</option>
+              <option value="Rolls-Royce">Rolls-Royce</option>
+              <option value="Aston Martin">Aston Martin</option>
+              <option value="Ferrari">Ferrari</option>
+              <option value="McLaren">McLaren</option>
+              <option value="Bugatti">Bugatti</option>
+              <option value="Porsche">Porsche</option>
+              <option value="Mercedes-Benz">Mercedes-Benz</option>
+              <option value="BMW">BMW</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <!-- Row 4: Model (spans 2 cols) | (empty) | Trim -->
+          <div class="form-group" style="margin:0;grid-column:span 2">
+            <label class="form-label" for="model-select">Model</label>
+            <select class="form-select" id="model-select">
+              <option value="">-Select-</option>
+            </select>
+            <input class="form-input hidden" type="text" id="model-text" placeholder="Enter model" style="margin-top:0;display:none" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="vi-trim">Trim</label>
+            <select class="form-select" id="vi-trim">
+              <option value="">-Select-</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Additional preference fields -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;border-top:1px solid var(--border-color,#2a2520);padding-top:14px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="price-min">Min Price ($)</label>
+            <input class="form-input currency-input" type="text" id="price-min" placeholder="0" inputmode="numeric" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="price-max">Max Price ($)</label>
+            <input class="form-input currency-input" type="text" id="price-max" placeholder="No limit" inputmode="numeric" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="ext-color">Exterior Color</label>
+            <input class="form-input" type="text" id="ext-color" placeholder="e.g. Nero Nemesis" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" for="max-mileage">Max Mileage</label>
+            <select class="form-select" id="max-mileage">
+              <option value="">Any</option>
+              <option value="5000">5,000</option>
+              <option value="10000">10,000</option>
+              <option value="25000">25,000</option>
+              <option value="50000">50,000</option>
+              <option value="75000">75,000</option>
+              <option value="100000">100,000</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px">
+          <label class="form-label" for="vehicle-notes">Vehicle Notes</label>
+          <textarea class="form-textarea" id="vehicle-notes" rows="3" placeholder="Special requests, options, features…"></textarea>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="find-matches-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M11 11L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          Search All 6 Stores for Matches
+        </button>
+      </div>
+
+      <!-- CARD 2: Current Matches -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" style="margin-bottom:0">Current Matches</div>
+          <span class="match-badge" id="match-count-badge">0</span>
+        </div>
+        <div id="matches-container">
+          <!-- Default empty state -->
+          <div class="empty-state" id="matches-empty">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="13" width="32" height="20" rx="4" stroke="#8a7d6a" stroke-width="1.5"/>
+              <path d="M10 13V11C10 9.34 11.34 8 13 8h14c1.66 0 3 1.34 3 3v2" stroke="#8a7d6a" stroke-width="1.5"/>
+              <circle cx="12" cy="25" r="2.5" stroke="#8a7d6a" stroke-width="1.5"/>
+              <circle cx="28" cy="25" r="2.5" stroke="#8a7d6a" stroke-width="1.5"/>
+              <path d="M14.5 25h11" stroke="#8a7d6a" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <div class="empty-state-title">No matching vehicles found</div>
+            <div class="empty-state-sub">Adjust preferences above and search again</div>
+          </div>
+          <div class="spinner-wrap hidden" id="matches-loading">
+            <svg class="spinner" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="18" cy="18" r="15" stroke="var(--border)" stroke-width="3"/>
+              <path d="M18 3a15 15 0 0 1 15 15" stroke="var(--gold)" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="match-list hidden" id="matches-list"></div>
+          <div class="empty-state hidden" id="matches-error">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="18" cy="18" r="15" stroke="#ef4444" stroke-width="1.5" opacity="0.4"/>
+              <path d="M18 11v8M18 23v2" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <div class="empty-state-title" style="color:#ef4444">Search failed</div>
+            <div class="empty-state-sub">Unable to reach the server. Please try again.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: Match Alerts -->
+      <div class="card">
+        <div class="card-title">Match Alerts</div>
+        <div id="alerts-container">
+          <div class="empty-state" id="alerts-empty">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 4a11 11 0 0 0-11 11v4l-2 4h26l-2-4v-4A11 11 0 0 0 18 4z" stroke="#8a7d6a" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M15 27a3 3 0 0 0 6 0" stroke="#8a7d6a" stroke-width="1.5"/>
+            </svg>
+            <div class="empty-state-title">No alerts yet</div>
+            <div class="empty-state-sub">Alerts will appear here when matching vehicles are found</div>
+          </div>
+          <div class="alert-list hidden" id="alerts-list"></div>
+        </div>
+      </div>
+
+    </div><!-- /right-col -->
+  </div><!-- /main-wrap -->
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════════
+       DATA
+    ═══════════════════════════════════════════════════════════════════ */
+    const MAKES_MODELS = {
+      'Lamborghini': ['Urus', 'Urus S', 'Urus Performante', 'Huracán EVO', 'Huracán Tecnica', 'Huracán STO', 'Revuelto', 'Temerario', 'Aventador S'],
+      'Bentley': ['Bentayga', 'Bentayga S', 'Bentayga EWB', 'Continental GT', 'Continental GT Speed', 'Continental GTC', 'Flying Spur', 'Flying Spur S', 'Mulsanne'],
+      'Rolls-Royce': ['Ghost', 'Ghost Extended', 'Ghost Black Badge', 'Spectre', 'Cullinan', 'Cullinan Black Badge', 'Cullinan Series II', 'Phantom', 'Phantom Extended', 'Wraith', 'Dawn'],
+      'Aston Martin': ['Vantage', 'DB11', 'DB12', 'DBX', 'DBX707', 'DBS'],
+      'Ferrari': ['Roma', 'Roma Spider', 'Portofino M', 'SF90 Stradale', '296 GTB', '296 GTS', 'F8 Tributo', '812 Superfast', 'Purosangue'],
+      'McLaren': ['Artura', 'GT', '720S', '750S', 'Senna', 'Elva'],
+      'Bugatti': ['Chiron', 'Veyron', 'Tourbillon'],
+      'Porsche': ['911', 'Cayenne', 'Cayenne Turbo', 'Panamera', 'Taycan', 'Macan'],
+      'Mercedes-Benz': ['S-Class', 'AMG GT', 'G-Class', 'EQS', 'Maybach S-Class', 'SL-Class'],
+      'BMW': ['7 Series', '8 Series', 'M8', 'XM', 'X7', 'i7'],
+    };
+
+    /* ═══════════════════════════════════════════════════════════════════
+       HELPERS
+    ═══════════════════════════════════════════════════════════════════ */
+    function getParams() { return new URLSearchParams(window.location.search); }
+    function isNew() { return getParams().get('new') === '1'; }
+    function getClientId() { return getParams().get('id'); }
+
+    function updateNavTitle(name) {
+      document.getElementById('nav-client-name').textContent = name || 'New Client';
+    }
+
+    function formatCurrency(val) {
+      return val.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function parseCurrency(val) {
+      return val.replace(/,/g, '');
+    }
+
+    function formatPrice(num) {
+      if (!num && num !== 0) return 'N/A';
+      return '$' + Number(num).toLocaleString('en-US');
+    }
+
+    function timeAgo(dateStr) {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = Math.floor((now - date) / 1000);
+      if (diff < 60) return 'Just now';
+      if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+      return `${Math.floor(diff/86400)}d ago`;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════════════════════════════════ */
+    let toastTimer = null;
+    function showToast(msg, isError) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = isError ? 'error show' : 'success show';
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       YEAR SELECTS
+    ═══════════════════════════════════════════════════════════════════ */
+    function buildYearSelects() {
+      const fromSel = document.getElementById('year-from');
+      const toSel = document.getElementById('year-to');
+      const MIN_YEAR = 2015;
+      const MAX_YEAR = 2027;
+      for (let y = MIN_YEAR; y <= MAX_YEAR; y++) {
+        const o1 = document.createElement('option');
+        o1.value = y; o1.textContent = y;
+        fromSel.appendChild(o1);
+        const o2 = document.createElement('option');
+        o2.value = y; o2.textContent = y;
+        toSel.appendChild(o2);
+      }
+      fromSel.value = MIN_YEAR;
+      toSel.value = MAX_YEAR;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       MODEL POPULATION
+    ═══════════════════════════════════════════════════════════════════ */
+    function populateModels(make, selectedModel) {
+      const modelSelect = document.getElementById('model-select');
+      const modelText = document.getElementById('model-text');
+
+      if (make === 'Other') {
+        modelSelect.style.display = 'none';
+        modelText.classList.remove('hidden');
+        modelText.style.display = 'block';
+        if (selectedModel) modelText.value = selectedModel;
+      } else {
+        modelText.classList.add('hidden');
+        modelText.style.display = 'none';
+        modelSelect.style.display = 'block';
+        modelSelect.innerHTML = '<option value="">Any Model</option>';
+
+        const models = MAKES_MODELS[make];
+        if (models) {
+          models.forEach(m => {
+            const o = document.createElement('option');
+            o.value = m; o.textContent = m;
+            modelSelect.appendChild(o);
+          });
+          if (selectedModel) modelSelect.value = selectedModel;
+        } else {
+          modelSelect.innerHTML = '<option value="" disabled>Select Make First</option>';
+        }
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       POPULATE FORM
+    ═══════════════════════════════════════════════════════════════════ */
+    function populateForm(client) {
+      // Contact fields
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+
+      set('first-name', client.firstName);
+      set('last-name', client.lastName);
+      set('email', client.email);
+      set('phone', client.phone);
+      set('address', client.address);
+      set('city', client.city);
+      set('state', client.state);
+      set('zip', client.zip);
+      set('status', client.status);
+      set('lead-source', client.leadSource);
+      set('salesperson', client.salesperson);
+      set('notes', client.notes);
+
+      // Vehicle interest
+      const vi = client.vehicleInterest || {};
+
+      set('vi-vin', vi.vin);
+      set('vi-mileage', vi.maxMileage);
+      set('vi-class', vi.class || 'Auto Truck');
+      set('vi-condition', vi.condition || 'either');
+      set('vi-stock', vi.stockNumber);
+
+      // Make + model
+      const makeVal = (vi.makes && vi.makes[0]) || vi.make || '';
+      document.getElementById('make-select').value = makeVal;
+      populateModels(makeVal, (vi.models && vi.models[0]) || vi.model || '');
+
+      // Trim
+      if (vi.trim) setTimeout(() => set('vi-trim', vi.trim), 60);
+
+      // Year range (stored as yearMin/yearMax)
+      if (vi.yearMin) document.getElementById('year-from').value = vi.yearMin;
+      if (vi.yearMax) document.getElementById('year-to').value = vi.yearMax;
+
+      // Max mileage
+      if (vi.maxMileage) set('max-mileage', vi.maxMileage);
+
+      // Price range (format with commas)
+      if (vi.priceMin) document.getElementById('price-min').value = formatCurrency(String(vi.priceMin));
+      if (vi.priceMax) document.getElementById('price-max').value = formatCurrency(String(vi.priceMax));
+
+      set('ext-color', vi.exteriorColor);
+      set('vehicle-notes', vi.vehicleNotes || vi.notes);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       GET FORM DATA
+    ═══════════════════════════════════════════════════════════════════ */
+    function getFormData() {
+      const val = id => (document.getElementById(id) || {}).value || '';
+
+      // eLEADS fields
+      const makeVal = val('make-select');
+      const modelVal = makeVal === 'Other' ? val('model-text') : val('model-select');
+      const priceMin = parseCurrency(val('price-min'));
+      const priceMax = parseCurrency(val('price-max'));
+
+      const vehicleInterest = {
+        vin: val('vi-vin'),
+        class: val('vi-class'),
+        condition: val('vi-condition') || 'either',
+        stockNumber: val('vi-stock'),
+        makes: [makeVal].filter(Boolean),
+        models: [modelVal].filter(Boolean),
+        yearMin: val('year-from') ? parseInt(val('year-from')) : null,
+        yearMax: val('year-to') ? parseInt(val('year-to')) : null,
+        trim: val('vi-trim'),
+        maxMileage: val('max-mileage') ? parseInt(val('max-mileage')) : (val('vi-mileage') ? parseInt(val('vi-mileage')) : null),
+        priceMin: priceMin || null,
+        priceMax: priceMax || null,
+        exteriorColor: val('ext-color'),
+        notes: val('vehicle-notes'),
+      };
+
+      return {
+        firstName: val('first-name'),
+        lastName: val('last-name'),
+        email: val('email'),
+        phone: val('phone'),
+        address: val('address'),
+        city: val('city'),
+        state: val('state'),
+        zip: val('zip'),
+        status: val('status'),
+        leadSource: val('lead-source'),
+        salesperson: val('salesperson'),
+        notes: val('notes'),
+        vehicleInterest,
+      };
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       LOAD CLIENT
+    ═══════════════════════════════════════════════════════════════════ */
+    async function loadClient() {
+      if (isNew()) {
+        updateNavTitle('New Client');
+        document.getElementById('delete-btn').style.display = 'none';
+        return;
+      }
+      const id = getClientId();
+      if (!id) return;
+
+      try {
+        const res = await fetch(`/.netlify/functions/clients?id=${id}`);
+        if (!res.ok) throw new Error('Not found');
+        const client = await res.json();
+        populateForm(client);
+        const name = [client.firstName, client.lastName].filter(Boolean).join(' ');
+        updateNavTitle(name || 'Client');
+      } catch (e) {
+        showToast('Failed to load client', true);
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       SAVE CLIENT
+    ═══════════════════════════════════════════════════════════════════ */
+    async function saveClient() {
+      const data = getFormData();
+      const saveBtn = document.getElementById('save-btn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      try {
+        let res;
+        if (isNew()) {
+          res = await fetch('/.netlify/functions/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+        } else {
+          res = await fetch('/.netlify/functions/clients', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: getClientId(), ...data }),
+          });
+        }
+        if (!res.ok) throw new Error('Save failed');
+        const result = await res.json();
+
+        if (isNew() && result.id) {
+          window.location.href = `client-profile.html?id=${result.id}`;
+          return;
+        }
+        const name = [data.firstName, data.lastName].filter(Boolean).join(' ');
+        updateNavTitle(name || 'Client');
+        showToast('Client saved successfully');
+      } catch (e) {
+        showToast('Failed to save client', true);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       DELETE CLIENT
+    ═══════════════════════════════════════════════════════════════════ */
+    async function deleteClient() {
+      if (!confirm('Delete this client? This cannot be undone.')) return;
+      try {
+        const res = await fetch(`/.netlify/functions/clients?id=${getClientId()}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+        window.location.href = 'crm.html';
+      } catch (e) {
+        showToast('Failed to delete client', true);
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       MATCHES
+    ═══════════════════════════════════════════════════════════════════ */
+    function showMatchesLoading() {
+      document.getElementById('matches-empty').classList.add('hidden');
+      document.getElementById('matches-error').classList.add('hidden');
+      document.getElementById('matches-list').classList.add('hidden');
+      document.getElementById('matches-loading').classList.remove('hidden');
+      document.getElementById('match-count-badge').textContent = '0';
+    }
+
+    function showMatchesError() {
+      document.getElementById('matches-loading').classList.add('hidden');
+      document.getElementById('matches-empty').classList.add('hidden');
+      document.getElementById('matches-list').classList.add('hidden');
+      document.getElementById('matches-error').classList.remove('hidden');
+    }
+
+    function renderMatches(matches) {
+      document.getElementById('matches-loading').classList.add('hidden');
+      document.getElementById('matches-error').classList.add('hidden');
+
+      const badge = document.getElementById('match-count-badge');
+      badge.textContent = matches.length;
+
+      if (!matches || matches.length === 0) {
+        document.getElementById('matches-empty').classList.remove('hidden');
+        document.getElementById('matches-list').classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('matches-empty').classList.add('hidden');
+      const list = document.getElementById('matches-list');
+      list.innerHTML = '';
+      list.classList.remove('hidden');
+
+      matches.forEach(vehicle => {
+        const isNewVehicle = (vehicle.condition || '').toLowerCase() === 'new';
+        const condBadgeClass = isNewVehicle ? 'new-badge' : 'used-badge';
+        const condBadgeText = isNewVehicle ? 'New' : 'Pre-Owned';
+        const mileageText = vehicle.mileage != null ? Number(vehicle.mileage).toLocaleString('en-US') + ' mi' : '';
+        const colorText = vehicle.exteriorColor || vehicle.color || '';
+
+        const item = document.createElement('div');
+        item.className = 'match-item';
+        item.innerHTML = `
+          ${vehicle.storeName ? `<div class="match-store-badge">${escHtml(vehicle.storeName)}</div>` : ''}
+          <div class="match-ymm">${escHtml([vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' '))}</div>
+          <div class="match-price">${formatPrice(vehicle.price)}</div>
+          <div class="match-details">
+            ${mileageText ? `<span>${escHtml(mileageText)}</span>` : ''}
+            <span class="condition-badge ${condBadgeClass}">${condBadgeText}</span>
+            ${colorText ? `<span>${escHtml(colorText)}</span>` : ''}
+          </div>
+          ${vehicle.detailUrl ? `<a class="match-link" href="${escAttr(vehicle.detailUrl)}" target="_blank" rel="noopener noreferrer">View Vehicle <span aria-hidden="true">→</span></a>` : ''}
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    async function findMatches() {
+      const prefs = getFormData().vehicleInterest;
+      const matchBtn = document.getElementById('find-matches-btn');
+      matchBtn.disabled = true;
+      matchBtn.innerHTML = `
+        <svg class="spinner" style="width:16px;height:16px;animation:spin 0.9s linear infinite" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="18" cy="18" r="15" stroke="rgba(212,168,67,0.2)" stroke-width="3"/>
+          <path d="M18 3a15 15 0 0 1 15 15" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        Searching…
+      `;
+      showMatchesLoading();
+
+      try {
+        const res = await fetch('/.netlify/functions/match-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(prefs),
+        });
+        if (!res.ok) throw new Error('Search failed');
+        const matches = await res.json();
+        renderMatches(matches);
+      } catch (e) {
+        showMatchesError();
+      } finally {
+        matchBtn.disabled = false;
+        matchBtn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M11 11L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          Find Matches Now
+        `;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       ALERTS
+    ═══════════════════════════════════════════════════════════════════ */
+    function renderAlerts(alerts) {
+      const empty = document.getElementById('alerts-empty');
+      const list = document.getElementById('alerts-list');
+
+      if (!alerts || alerts.length === 0) {
+        empty.classList.remove('hidden');
+        list.classList.add('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      list.innerHTML = '';
+      list.classList.remove('hidden');
+
+      alerts.forEach(alert => {
+        const ymm = [alert.year, alert.make, alert.model].filter(Boolean).join(' ');
+        const item = document.createElement('div');
+        item.className = 'alert-item';
+        item.innerHTML = `
+          <div class="alert-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="6" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M5 6V5a4 4 0 0 1 8 0v1" stroke="currentColor" stroke-width="1.2"/>
+              <circle cx="5.5" cy="12" r="1.5" stroke="currentColor" stroke-width="1.2"/>
+              <circle cx="12.5" cy="12" r="1.5" stroke="currentColor" stroke-width="1.2"/>
+            </svg>
+          </div>
+          <div class="alert-body">
+            <div class="alert-vehicle">${escHtml(ymm || 'Vehicle Match')}</div>
+            <div class="alert-meta">
+              ${alert.storeName ? `<span class="alert-store">${escHtml(alert.storeName)}</span>` : ''}
+              <span class="alert-time">${alert.createdAt ? timeAgo(alert.createdAt) : ''}</span>
+            </div>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    async function loadAlerts() {
+      const id = getClientId();
+      if (!id) return;
+      try {
+        const res = await fetch('/.netlify/functions/alerts');
+        if (!res.ok) return;
+        const alerts = await res.json();
+        const mine = Array.isArray(alerts) ? alerts.filter(a => a.clientId === id) : [];
+        renderAlerts(mine);
+      } catch (e) {
+        // silently fail – alerts are non-critical
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       SECURITY HELPERS
+    ═══════════════════════════════════════════════════════════════════ */
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escAttr(str) { return escHtml(str); }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       EVENT WIRING
+    ═══════════════════════════════════════════════════════════════════ */
+
+    // Condition pills
+    document.querySelectorAll('.condition-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.condition-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // Make → populate models
+    document.getElementById('make-select').addEventListener('change', e => {
+      populateModels(e.target.value);
+    });
+
+    // Include Latest checkbox → set year-to to 2027
+    document.getElementById('include-latest').addEventListener('change', e => {
+      const toSel = document.getElementById('year-to');
+      if (e.target.checked) {
+        toSel.value = '2027';
+        toSel.disabled = true;
+      } else {
+        toSel.disabled = false;
+      }
+    });
+
+    // Currency inputs
+    document.querySelectorAll('.currency-input').forEach(inp => {
+      inp.addEventListener('input', e => {
+        const raw = e.target.value;
+        const formatted = formatCurrency(raw);
+        e.target.value = formatted;
+      });
+    });
+
+    // Buttons
+    document.getElementById('find-matches-btn').addEventListener('click', findMatches);
+    document.getElementById('save-btn').addEventListener('click', saveClient);
+    document.getElementById('delete-btn').addEventListener('click', deleteClient);
+
+    // State input → auto uppercase
+    document.getElementById('state').addEventListener('input', e => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+
+    /* ═══════════════════════════════════════════════════════════════════
+       INIT
+    ═══════════════════════════════════════════════════════════════════ */
+    buildYearSelects();
+    loadClient();
+    loadAlerts();
+  </script>
+</body>
+</html>
