@@ -16,3 +16,4 @@
   from = "/"
   to = "/crm"
   status = 302
+  force = true
