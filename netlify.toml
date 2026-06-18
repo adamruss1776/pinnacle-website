@@ -11,3 +11,8 @@
 
 [functions."jessica-daily-scan"]
   schedule = "0 7 * * *"
+
+[[redirects]]
+  from = "/"
+  to = "/crm"
+  status = 302
